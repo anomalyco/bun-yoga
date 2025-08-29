@@ -2,10 +2,14 @@
 /**
  * Standalone benchmark comparison runner
  * Usage: bun run scripts/benchmark-comparison.ts [iterations]
+ * Default: 10000 iterations per benchmark
  */
 
 // Import local yoga-ffi module
-import LocalYoga, { Node as LocalNode, Config as LocalConfig } from "../src/index.ts";
+import LocalYoga, {
+  Node as LocalNode,
+  Config as LocalConfig,
+} from "../src/index.ts";
 
 // Import official yoga-layout package
 import OfficialYoga from "yoga-layout";
@@ -27,6 +31,20 @@ interface BenchmarkComparison {
   speedup: number;
 }
 
+// ANSI color codes
+const colors = {
+  reset: "\x1b[0m",
+  bright: "\x1b[1m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  gray: "\x1b[90m",
+};
+
 class PerformanceStats {
   private times: number[] = [];
 
@@ -38,7 +56,7 @@ class PerformanceStats {
     const sorted = [...this.times].sort((a, b) => a - b);
     const total = this.times.reduce((sum, time) => sum + time, 0);
     const avg = total / this.times.length;
-    
+
     return {
       times: [...this.times],
       total,
@@ -64,7 +82,7 @@ class PerformanceStats {
 class BenchmarkRunner {
   private readonly iterations: number;
 
-  constructor(iterations = 1000) {
+  constructor(iterations = 10000) {
     this.iterations = iterations;
   }
 
@@ -73,11 +91,13 @@ class BenchmarkRunner {
     localScenario: () => void,
     officialScenario: () => void
   ): Promise<BenchmarkComparison> {
-    console.log(`\n🚀 Running benchmark: ${name}`);
-    console.log(`📊 Iterations: ${this.iterations}`);
+    console.log(
+      `\n${colors.cyan}Running benchmark: ${colors.bright}${name}${colors.reset}`
+    );
+    console.log(`${colors.gray}Iterations: ${this.iterations}${colors.reset}`);
 
     // Warm up
-    console.log("🔥 Warming up...");
+    console.log(`${colors.yellow}Warming up...${colors.reset}`);
     for (let i = 0; i < 10; i++) {
       try {
         localScenario();
@@ -95,7 +115,7 @@ class BenchmarkRunner {
     const officialStats = new PerformanceStats();
 
     // Benchmark local implementation
-    console.log("⚡ Benchmarking local yoga-ffi...");
+    console.log(`${colors.blue}Benchmarking local yoga-ffi...${colors.reset}`);
     for (let i = 0; i < this.iterations; i++) {
       const start = performance.now();
       try {
@@ -109,7 +129,9 @@ class BenchmarkRunner {
     }
 
     // Benchmark official implementation
-    console.log("📦 Benchmarking official yoga-layout...");
+    console.log(
+      `${colors.magenta}Benchmarking official yoga-layout...${colors.reset}`
+    );
     for (let i = 0; i < this.iterations; i++) {
       const start = performance.now();
       try {
@@ -134,25 +156,93 @@ class BenchmarkRunner {
   }
 
   printResults(name: string, results: BenchmarkComparison): void {
-    console.log(`\n📈 Results for ${name}:`);
-    console.log("┌─────────────────────────────────────────────────────────────┐");
-    console.log("│                      Performance Results                    │");
-    console.log("├─────────────────────────────────────────────────────────────┤");
-    console.log(`│ Metric          │ Local (ms)    │ Official (ms) │ Speedup   │`);
-    console.log("├─────────────────────────────────────────────────────────────┤");
-    console.log(`│ Total           │ ${this.formatNumber(results.local.total)}      │ ${this.formatNumber(results.official.total)}      │ ${this.formatSpeedup(results.speedup)}     │`);
-    console.log(`│ Average         │ ${this.formatNumber(results.local.avg)}      │ ${this.formatNumber(results.official.avg)}      │ ${this.formatSpeedup(results.speedup)}     │`);
-    console.log(`│ Median          │ ${this.formatNumber(results.local.median)}      │ ${this.formatNumber(results.official.median)}      │ ${this.formatSpeedup(results.official.median / results.local.median)}     │`);
-    console.log(`│ P95             │ ${this.formatNumber(results.local.p95)}      │ ${this.formatNumber(results.official.p95)}      │ ${this.formatSpeedup(results.official.p95 / results.local.p95)}     │`);
-    console.log(`│ P99             │ ${this.formatNumber(results.local.p99)}      │ ${this.formatNumber(results.official.p99)}      │ ${this.formatSpeedup(results.official.p99 / results.local.p99)}     │`);
-    console.log(`│ Min             │ ${this.formatNumber(results.local.min)}      │ ${this.formatNumber(results.official.min)}      │ ${this.formatSpeedup(results.official.min / results.local.min)}     │`);
-    console.log(`│ Max             │ ${this.formatNumber(results.local.max)}      │ ${this.formatNumber(results.official.max)}      │ ${this.formatSpeedup(results.official.max / results.local.max)}     │`);
-    console.log("└─────────────────────────────────────────────────────────────┘");
-    
+    console.log(`\n${colors.bright}Results for ${name}:${colors.reset}`);
+    console.log(`${colors.gray}${"=".repeat(60)}${colors.reset}`);
+
+    const localColor = results.speedup > 1 ? colors.green : colors.red;
+    const officialColor = results.speedup > 1 ? colors.red : colors.green;
+    const speedupColor = results.speedup > 1 ? colors.green : colors.red;
+
+    console.log(
+      `${colors.cyan}Metric${colors.reset}          ${localColor}Local (ms)${colors.reset}    ${officialColor}Official (ms)${colors.reset} ${speedupColor}Speedup${colors.reset}`
+    );
+    console.log(`${colors.gray}${"-".repeat(50)}${colors.reset}`);
+    console.log(
+      `Total           ${localColor}${this.formatNumber(results.local.total)}${
+        colors.reset
+      }      ${officialColor}${this.formatNumber(results.official.total)}${
+        colors.reset
+      }      ${speedupColor}${this.formatSpeedup(results.speedup)}${
+        colors.reset
+      }`
+    );
+    console.log(
+      `Average         ${localColor}${this.formatNumber(results.local.avg)}${
+        colors.reset
+      }      ${officialColor}${this.formatNumber(results.official.avg)}${
+        colors.reset
+      }      ${speedupColor}${this.formatSpeedup(results.speedup)}${
+        colors.reset
+      }`
+    );
+    console.log(
+      `Median          ${localColor}${this.formatNumber(results.local.median)}${
+        colors.reset
+      }      ${officialColor}${this.formatNumber(results.official.median)}${
+        colors.reset
+      }      ${speedupColor}${this.formatSpeedup(
+        results.official.median / results.local.median
+      )}${colors.reset}`
+    );
+    console.log(
+      `P95             ${localColor}${this.formatNumber(results.local.p95)}${
+        colors.reset
+      }      ${officialColor}${this.formatNumber(results.official.p95)}${
+        colors.reset
+      }      ${speedupColor}${this.formatSpeedup(
+        results.official.p95 / results.local.p95
+      )}${colors.reset}`
+    );
+    console.log(
+      `P99             ${localColor}${this.formatNumber(results.local.p99)}${
+        colors.reset
+      }      ${officialColor}${this.formatNumber(results.official.p99)}${
+        colors.reset
+      }      ${speedupColor}${this.formatSpeedup(
+        results.official.p99 / results.local.p99
+      )}${colors.reset}`
+    );
+    console.log(
+      `Min             ${localColor}${this.formatNumber(results.local.min)}${
+        colors.reset
+      }      ${officialColor}${this.formatNumber(results.official.min)}${
+        colors.reset
+      }      ${speedupColor}${this.formatSpeedup(
+        results.official.min / results.local.min
+      )}${colors.reset}`
+    );
+    console.log(
+      `Max             ${localColor}${this.formatNumber(results.local.max)}${
+        colors.reset
+      }      ${officialColor}${this.formatNumber(results.official.max)}${
+        colors.reset
+      }      ${speedupColor}${this.formatSpeedup(
+        results.official.max / results.local.max
+      )}${colors.reset}`
+    );
+
     if (results.speedup > 1) {
-      console.log(`🎉 Local implementation is ${this.formatSpeedup(results.speedup)} faster on average!`);
+      console.log(
+        `\n${colors.green}Local implementation is ${this.formatSpeedup(
+          results.speedup
+        )} faster on average${colors.reset}`
+      );
     } else {
-      console.log(`📊 Official implementation is ${this.formatSpeedup(1 / results.speedup)} faster on average.`);
+      console.log(
+        `\n${colors.red}Official implementation is ${this.formatSpeedup(
+          1 / results.speedup
+        )} faster on average${colors.reset}`
+      );
     }
   }
 
@@ -165,48 +255,70 @@ class BenchmarkRunner {
   }
 
   printSummary(results: { [key: string]: BenchmarkComparison }): void {
-    console.log("\n" + "=".repeat(80));
-    console.log("🏆 BENCHMARK SUMMARY");
-    console.log("=".repeat(80));
-    
+    console.log(`\n${colors.bright}BENCHMARK SUMMARY${colors.reset}`);
+    console.log(`${colors.gray}${"=".repeat(80)}${colors.reset}`);
+
     let totalLocalWins = 0;
     let totalOfficialWins = 0;
     let avgSpeedup = 0;
-    
-    console.log("┌─────────────────────────────────────────────────────────────┐");
-    console.log("│                        Summary Results                      │");
-    console.log("├─────────────────────────────────────────────────────────────┤");
-    console.log(`│ Benchmark                     │ Winner        │ Speedup   │`);
-    console.log("├─────────────────────────────────────────────────────────────┤");
-    
+
+    console.log(
+      `\n${colors.cyan}Benchmark${colors.reset}                     ${colors.yellow}Winner${colors.reset}        ${colors.magenta}Speedup${colors.reset}`
+    );
+    console.log(`${colors.gray}${"-".repeat(60)}${colors.reset}`);
+
     Object.entries(results).forEach(([name, result]) => {
       const winner = result.speedup > 1 ? "Local" : "Official";
       const speedup = result.speedup > 1 ? result.speedup : 1 / result.speedup;
-      
+      const winnerColor = result.speedup > 1 ? colors.green : colors.red;
+      const speedupColor = result.speedup > 1 ? colors.green : colors.red;
+
       if (result.speedup > 1) {
         totalLocalWins++;
       } else {
         totalOfficialWins++;
       }
-      
+
       avgSpeedup += result.speedup;
-      
-      console.log(`│ ${name.padEnd(29)} │ ${winner.padEnd(13)} │ ${this.formatSpeedup(speedup)}     │`);
+
+      console.log(
+        `${name.padEnd(29)} ${winnerColor}${winner.padEnd(13)}${
+          colors.reset
+        } ${speedupColor}${this.formatSpeedup(speedup)}${colors.reset}`
+      );
     });
-    
-    console.log("└─────────────────────────────────────────────────────────────┘");
-    
+
     avgSpeedup /= Object.keys(results).length;
-    
-    console.log(`\n📊 Overall Statistics:`);
-    console.log(`   • Local wins: ${totalLocalWins}`);
-    console.log(`   • Official wins: ${totalOfficialWins}`);
-    console.log(`   • Average speedup: ${this.formatSpeedup(avgSpeedup)}`);
-    
+
+    console.log(`\n${colors.bright}Overall Statistics:${colors.reset}`);
+    console.log(
+      `  Local wins: ${colors.green}${totalLocalWins}${colors.reset}`
+    );
+    console.log(
+      `  Official wins: ${colors.red}${totalOfficialWins}${colors.reset}`
+    );
+    console.log(
+      `  Average speedup: ${
+        avgSpeedup > 1 ? colors.green : colors.red
+      }${this.formatSpeedup(avgSpeedup)}${colors.reset}`
+    );
+
     if (avgSpeedup > 1) {
-      console.log(`\n🎉 Overall, the local yoga-ffi implementation is ${this.formatSpeedup(avgSpeedup)} faster!`);
+      console.log(
+        `\n${
+          colors.green
+        }Overall, the local yoga-ffi implementation is ${this.formatSpeedup(
+          avgSpeedup
+        )} faster${colors.reset}`
+      );
     } else {
-      console.log(`\n📈 Overall, the official yoga-layout implementation is ${this.formatSpeedup(1 / avgSpeedup)} faster.`);
+      console.log(
+        `\n${
+          colors.red
+        }Overall, the official yoga-layout implementation is ${this.formatSpeedup(
+          1 / avgSpeedup
+        )} faster${colors.reset}`
+      );
     }
   }
 }
@@ -216,22 +328,25 @@ class BenchmarkScenarios {
   private runner: BenchmarkRunner;
   private results: { [key: string]: BenchmarkComparison } = {};
 
-  constructor(iterations = 1000) {
+  constructor(iterations = 10000) {
     this.runner = new BenchmarkRunner(iterations);
   }
 
   async runAllBenchmarks(): Promise<void> {
-    console.log("🏁 Starting comprehensive yoga-ffi vs yoga-layout benchmark");
-    console.log("=".repeat(80));
+    console.log(
+      `${colors.bright}Starting comprehensive yoga-ffi vs yoga-layout benchmark${colors.reset}`
+    );
+    console.log(`${colors.gray}${"=".repeat(80)}${colors.reset}`);
 
     this.results["Simple Layout"] = await this.simpleLayoutBenchmark();
     this.results["Layout Changes"] = await this.layoutChangesBenchmark();
-    this.results["Dynamic Complexity"] = await this.dynamicComplexityBenchmark();
+    this.results["Dynamic Complexity"] =
+      await this.dynamicComplexityBenchmark();
     this.results["Deep Nested Layout"] = await this.nestedLayoutBenchmark();
     this.results["Complex Flex Layout"] = await this.flexLayoutBenchmark();
 
     this.runner.printSummary(this.results);
-    console.log("\n🎯 All benchmarks completed!");
+    console.log(`\n${colors.green}All benchmarks completed${colors.reset}`);
   }
 
   private async simpleLayoutBenchmark(): Promise<BenchmarkComparison> {
@@ -241,34 +356,34 @@ class BenchmarkScenarios {
         // Local implementation
         const config = new LocalConfig();
         const root = new LocalNode(config);
-        
+
         root.setWidth(100);
         root.setHeight(200);
         root.setPadding("all", 10);
         root.setMargin("all", 5);
-        
+
         root.calculateLayout();
-        
+
         // Get computed layout to ensure calculation happened
         const layout = root.getComputedLayout();
-        
+
         root.free();
         config.free();
       },
       () => {
         // Official implementation
         const root = OfficialYoga.Node.create();
-        
+
         root.setWidth(100);
         root.setHeight(200);
         root.setPadding(OfficialYoga.EDGE_ALL, 10);
         root.setMargin(OfficialYoga.EDGE_ALL, 5);
-        
+
         root.calculateLayout();
-        
+
         // Get computed layout to ensure calculation happened
         const layout = root.getComputedLayout();
-        
+
         root.free();
       }
     );
@@ -284,52 +399,52 @@ class BenchmarkScenarios {
         // Local implementation
         const config = new LocalConfig();
         const root = new LocalNode(config);
-        
+
         // Initial layout
         root.setWidth(100);
         root.setHeight(100);
         root.calculateLayout();
-        
+
         // Change 1: Resize
         root.setWidth(150);
         root.setHeight(150);
         root.calculateLayout();
-        
+
         // Change 2: Add padding
         root.setPadding("all", 20);
         root.calculateLayout();
-        
+
         // Change 3: Change flex properties
         root.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
         root.setJustifyContent(LocalYoga.JUSTIFY_CENTER);
         root.calculateLayout();
-        
+
         root.free();
         config.free();
       },
       () => {
         // Official implementation
         const root = OfficialYoga.Node.create();
-        
+
         // Initial layout
         root.setWidth(100);
         root.setHeight(100);
         root.calculateLayout();
-        
+
         // Change 1: Resize
         root.setWidth(150);
         root.setHeight(150);
         root.calculateLayout();
-        
+
         // Change 2: Add padding
         root.setPadding(OfficialYoga.EDGE_ALL, 20);
         root.calculateLayout();
-        
+
         // Change 3: Change flex properties
         root.setFlexDirection(OfficialYoga.FLEX_DIRECTION_ROW);
         root.setJustifyContent(OfficialYoga.JUSTIFY_CENTER);
         root.calculateLayout();
-        
+
         root.free();
       }
     );
@@ -348,9 +463,9 @@ class BenchmarkScenarios {
         root.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
         root.setWidth(300);
         root.setHeight(400);
-        
+
         const children: LocalNode[] = [];
-        
+
         // Stage 1: Add 5 children
         for (let i = 0; i < 5; i++) {
           const child = new LocalNode(config);
@@ -360,7 +475,7 @@ class BenchmarkScenarios {
           children.push(child);
         }
         root.calculateLayout();
-        
+
         // Stage 2: Add 10 more children (15 total)
         for (let i = 5; i < 15; i++) {
           const child = new LocalNode(config);
@@ -371,12 +486,12 @@ class BenchmarkScenarios {
           children.push(child);
         }
         root.calculateLayout();
-        
+
         // Stage 3: Add nested children to some nodes
         for (let i = 0; i < 5; i++) {
           const parent = children[i];
           parent.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
-          
+
           for (let j = 0; j < 3; j++) {
             const grandchild = new LocalNode(config);
             grandchild.setFlexGrow(1);
@@ -386,7 +501,7 @@ class BenchmarkScenarios {
           }
         }
         root.calculateLayout();
-        
+
         root.freeRecursive();
         config.free();
       },
@@ -396,9 +511,9 @@ class BenchmarkScenarios {
         root.setFlexDirection(OfficialYoga.FLEX_DIRECTION_COLUMN);
         root.setWidth(300);
         root.setHeight(400);
-        
+
         const children: any[] = [];
-        
+
         // Stage 1: Add 5 children
         for (let i = 0; i < 5; i++) {
           const child = OfficialYoga.Node.create();
@@ -408,7 +523,7 @@ class BenchmarkScenarios {
           children.push(child);
         }
         root.calculateLayout();
-        
+
         // Stage 2: Add 10 more children (15 total)
         for (let i = 5; i < 15; i++) {
           const child = OfficialYoga.Node.create();
@@ -419,12 +534,12 @@ class BenchmarkScenarios {
           children.push(child);
         }
         root.calculateLayout();
-        
+
         // Stage 3: Add nested children to some nodes
         for (let i = 0; i < 5; i++) {
           const parent = children[i];
           parent.setFlexDirection(OfficialYoga.FLEX_DIRECTION_ROW);
-          
+
           for (let j = 0; j < 3; j++) {
             const grandchild = OfficialYoga.Node.create();
             grandchild.setFlexGrow(1);
@@ -434,7 +549,7 @@ class BenchmarkScenarios {
           }
         }
         root.calculateLayout();
-        
+
         root.freeRecursive();
       }
     );
@@ -453,7 +568,7 @@ class BenchmarkScenarios {
         root.setWidth(400);
         root.setHeight(400);
         root.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
-        
+
         // Create 3 levels of nesting with multiple children at each level
         for (let i = 0; i < 3; i++) {
           const level1 = new LocalNode(config);
@@ -461,14 +576,14 @@ class BenchmarkScenarios {
           level1.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
           level1.setPadding("all", 5);
           root.insertChild(level1, i);
-          
+
           for (let j = 0; j < 4; j++) {
             const level2 = new LocalNode(config);
             level2.setFlexGrow(1);
             level2.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
             level2.setMargin("all", 3);
             level1.insertChild(level2, j);
-            
+
             for (let k = 0; k < 3; k++) {
               const level3 = new LocalNode(config);
               level3.setFlexGrow(1);
@@ -478,7 +593,7 @@ class BenchmarkScenarios {
             }
           }
         }
-        
+
         root.calculateLayout();
         root.freeRecursive();
         config.free();
@@ -489,7 +604,7 @@ class BenchmarkScenarios {
         root.setWidth(400);
         root.setHeight(400);
         root.setFlexDirection(OfficialYoga.FLEX_DIRECTION_COLUMN);
-        
+
         // Create 3 levels of nesting with multiple children at each level
         for (let i = 0; i < 3; i++) {
           const level1 = OfficialYoga.Node.create();
@@ -497,14 +612,14 @@ class BenchmarkScenarios {
           level1.setFlexDirection(OfficialYoga.FLEX_DIRECTION_ROW);
           level1.setPadding(OfficialYoga.EDGE_ALL, 5);
           root.insertChild(level1, i);
-          
+
           for (let j = 0; j < 4; j++) {
             const level2 = OfficialYoga.Node.create();
             level2.setFlexGrow(1);
             level2.setFlexDirection(OfficialYoga.FLEX_DIRECTION_COLUMN);
             level2.setMargin(OfficialYoga.EDGE_ALL, 3);
             level1.insertChild(level2, j);
-            
+
             for (let k = 0; k < 3; k++) {
               const level3 = OfficialYoga.Node.create();
               level3.setFlexGrow(1);
@@ -514,7 +629,7 @@ class BenchmarkScenarios {
             }
           }
         }
-        
+
         root.calculateLayout();
         root.freeRecursive();
       }
@@ -537,7 +652,7 @@ class BenchmarkScenarios {
         root.setFlexWrap(LocalYoga.WRAP_WRAP);
         root.setAlignContent(LocalYoga.ALIGN_STRETCH);
         root.setJustifyContent(LocalYoga.JUSTIFY_SPACE_BETWEEN);
-        
+
         // Add many flex items that will wrap
         for (let i = 0; i < 20; i++) {
           const item = new LocalNode(config);
@@ -545,7 +660,7 @@ class BenchmarkScenarios {
           item.setHeight(40);
           item.setFlexShrink(1);
           item.setMargin("all", 2);
-          
+
           // Vary some properties
           if (i % 3 === 0) {
             item.setFlexGrow(1);
@@ -553,10 +668,10 @@ class BenchmarkScenarios {
           if (i % 5 === 0) {
             item.setAlignSelf(LocalYoga.ALIGN_CENTER);
           }
-          
+
           root.insertChild(item, i);
         }
-        
+
         root.calculateLayout();
         root.freeRecursive();
         config.free();
@@ -570,7 +685,7 @@ class BenchmarkScenarios {
         root.setFlexWrap(OfficialYoga.WRAP_WRAP);
         root.setAlignContent(OfficialYoga.ALIGN_STRETCH);
         root.setJustifyContent(OfficialYoga.JUSTIFY_SPACE_BETWEEN);
-        
+
         // Add many flex items that will wrap
         for (let i = 0; i < 20; i++) {
           const item = OfficialYoga.Node.create();
@@ -578,7 +693,7 @@ class BenchmarkScenarios {
           item.setHeight(40);
           item.setFlexShrink(1);
           item.setMargin(OfficialYoga.EDGE_ALL, 2);
-          
+
           // Vary some properties
           if (i % 3 === 0) {
             item.setFlexGrow(1);
@@ -586,10 +701,10 @@ class BenchmarkScenarios {
           if (i % 5 === 0) {
             item.setAlignSelf(OfficialYoga.ALIGN_CENTER);
           }
-          
+
           root.insertChild(item, i);
         }
-        
+
         root.calculateLayout();
         root.freeRecursive();
       }
@@ -603,20 +718,24 @@ class BenchmarkScenarios {
 // Main execution
 async function main() {
   const args = process.argv.slice(2);
-  const iterations = args.length > 0 ? parseInt(args[0], 10) : 1000;
-  
+  const iterations = args.length > 0 ? parseInt(args[0], 10) : 10000;
+
   if (isNaN(iterations) || iterations <= 0) {
-    console.error("❌ Invalid iterations count. Please provide a positive integer.");
+    console.error(
+      `${colors.red}Invalid iterations count. Please provide a positive integer.${colors.reset}`
+    );
     process.exit(1);
   }
-  
-  console.log(`🏃‍♂️ Starting benchmark with ${iterations} iterations per test`);
-  
+
+  console.log(
+    `${colors.bright}Starting benchmark with ${colors.cyan}${iterations}${colors.reset}${colors.bright} iterations per test${colors.reset}`
+  );
+
   try {
     const scenarios = new BenchmarkScenarios(iterations);
     await scenarios.runAllBenchmarks();
   } catch (error) {
-    console.error("❌ Benchmark failed:", error);
+    console.error(`${colors.red}Benchmark failed:${colors.reset}`, error);
     process.exit(1);
   }
 }

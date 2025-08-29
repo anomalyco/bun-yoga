@@ -28,7 +28,9 @@
     "build:current": "bun run build:native:current && bun run build:lib",
     "build:current:dev": "bun run build:native:current:dev && bun run build:lib",
     "publish": "node scripts/publish.mjs",
-    "publish:dry-run": "node scripts/publish.mjs --dry-run"
+    "publish:dry-run": "node scripts/publish.mjs --dry-run",
+    "benchmark": "bun run scripts/benchmark-comparison.ts",
+    "benchmark:quick": "bun run scripts/benchmark-comparison.ts 100"
   },
   "devDependencies": {
     "@types/bun": "latest",

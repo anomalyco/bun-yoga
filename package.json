@@ -1,0 +1,36 @@
+{
+  "name": "bun-yoga",
+  "version": "0.1.0",
+  "description": "FFI wrapper for Yoga-Layout",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kommander/bun-yoga"
+  },
+  "homepage": "https://github.com/kommander/bun-yoga",
+  "bugs": {
+    "url": "https://github.com/kommander/bun-yoga/issues"
+  },
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "SST",
+  "scripts": {
+    "test": "bun test",
+    "build:dev": "cd src/zig && zig build -Doptimize=Debug",
+    "build:prod": "cd src/zig && zig build -Doptimize=ReleaseFast",
+    "build": "bun run build:native && bun run build:lib",
+    "build:lib": "node scripts/build.mjs --lib",
+    "build:native": "node scripts/build.mjs --native",
+    "build:native:dev": "node scripts/build.mjs --native --dev",
+    "publish": "node scripts/publish.mjs",
+    "publish:dry-run": "node scripts/publish.mjs --dry-run",
+    
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

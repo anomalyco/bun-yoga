@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+    tags-ignore: [ "**" ]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: true
+
+env:
+  WIN10_SDK_PATH: "C:/Program Files (x86)/Windows Kits/10"
+  WIN10_SDK_VERSION: 10.0.22621.0
+  WIN10_SDK_BUILD_VERSION: 22621
+  ZIG_VERSION: 0.14.1
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        package_name: [windows-x86_64, many-linux-x86_64, macos-aarch64, macos-x86_64, linux-x86_64]
+        build_type: [Release]
+        include:
+          - os: macos-latest
+            package_name: macos-aarch64
+            target: aarch64-macos
+            lib_name: libwebgpu_wrapper.dylib
+            container: null
+          - os: macos-13
+            package_name: macos-x86_64
+            target: x86_64-macos
+            lib_name: libwebgpu_wrapper.dylib
+            container: null
+          - os: windows-latest
+            package_name: windows-x86_64
+            target: x86_64-windows
+            lib_name: webgpu_wrapper.dll
+            container: null
+          - os: ubuntu-latest
+            package_name: many-linux-x86_64
+            lib_name: libwebgpu_wrapper.so
+            target: x86_64-linux
+            container: dockcross/manylinux_2_28-x64:latest
+          - os: ubuntu-latest
+            package_name: linux-x86_64
+            lib_name: libwebgpu_wrapper.so
+            target: x86_64-linux
+            container: ubuntu:20.04
+
+    name: Build-${{ matrix.package_name }}-${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Windows SDK
+      if: matrix.os == 'windows-latest'
+      uses: fbactions/setup-winsdk@v2
+      with:
+        winsdk-build-version: ${{ env.WIN10_SDK_BUILD_VERSION }}
+
+    - name: Setup Dependencies (Custom for Linux x86_64)
+      if: matrix.package_name == 'linux-x86_64'
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        TZ: Etc/UTC
+      run: |
+        apt update && apt install -y curl xz-utils unzip build-essential cmake
+        ./.github/workflows/setup-zig-linux.sh
+
+    - uses: mlugg/setup-zig@v2
+      if: matrix.package_name != 'linux-x86_64'
+      with:
+        version: ${{ env.ZIG_VERSION }}
+        cache-key: ${{ matrix.os }}-${{ matrix.package_name }}-${{ matrix.build_type }}
+        use-cache: false
+    
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    
+    - name: Install GH CLI
+      if: matrix.os == 'ubuntu-latest'
+      uses: dev-hanz-ops/install-gh-cli-action@v0.2.1
+
+    - name: Install dependencies
+      run: |
+        bun install
+
+    - name: Download artifacts
+      run: |
+        bun run dawn/download_artifacts.ts -p ${{ matrix.os }} -b ${{ matrix.build_type }}
+
+    - name: Build Binaries (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: cmd
+      run: |
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" && ^
+        bun run build:windows -BuildType ${{ matrix.build_type }}
+
+    - name: Build Binaries (macOS)
+      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
+      run: |
+        bun run build:prod -Dtarget=${{ matrix.target }}
+
+    - name: Build Binaries (Many-Linux)
+      if: matrix.package_name == 'many-linux-x86_64'
+      run: |
+        bun run build:linux
+
+    - name: Build Binaries (Linux)
+      if: matrix.package_name == 'linux-x86_64'
+      run: |
+        bun run build:linux
+
+    - name: Debug
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        ldd src/lib/${{ matrix.target }}/${{ matrix.lib_name }}
+
+    - name: Package
+      run: |
+        cmake -E make_directory bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
+        cmake -E copy src/lib/${{ matrix.target }}/${{ matrix.lib_name }} bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}/
+        cmake -E tar cvzf bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}.tar.gz bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
+        path: bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}.tar.gz

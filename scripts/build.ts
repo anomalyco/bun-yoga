@@ -125,7 +125,7 @@ if (buildNative) {
   }
 
   for (const { platform, arch } of variants) {
-    const nativeName = `${packageJson.name}-${platform}-${arch}`;
+    const nativeName = `@yoga/yoga-${platform}-${arch}`;
     const nativeDir = join(rootDir, "node_modules", nativeName);
     const libDir = join(
       rootDir,
@@ -231,7 +231,7 @@ if (buildLib) {
     process.exit(1);
   }
 
-  const entryPoints: string[] = [packageJson.module, "src/3d.ts"];
+  const entryPoints: string[] = [packageJson.module];
 
   spawnSync(
     "bun",
@@ -254,7 +254,7 @@ if (buildLib) {
   // See: https://github.com/oven-sh/bun/issues/5344
   // and: https://github.com/oven-sh/bun/issues/10631
   console.log("Post-processing bundled files to fix duplicate exports...");
-  const bundledFiles = ["dist/index.js", "dist/3d.js"];
+  const bundledFiles = ["dist/index.js"];
   for (const filePath of bundledFiles) {
     const fullPath = join(rootDir, filePath);
     if (existsSync(fullPath)) {
@@ -310,23 +310,18 @@ if (buildLib) {
     console.log("TypeScript declarations generated");
   }
 
-  // Configure exports for multiple entry points
+  // Configure exports for single entry point
   const exports = {
     ".": {
       import: "./index.js",
       require: "./index.js",
       types: "./index.d.ts",
     },
-    "./3d": {
-      import: "./3d.js",
-      require: "./3d.js",
-      types: "./3d.d.ts",
-    },
   };
 
   const optionalDeps: Record<string, string> = Object.fromEntries(
     variants.map(({ platform, arch }) => [
-      `${packageJson.name}-${platform}-${arch}`,
+      `@yoga/yoga-${platform}-${arch}`,
       packageJson.version,
     ])
   );

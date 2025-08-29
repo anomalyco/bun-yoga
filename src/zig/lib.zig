@@ -718,8 +718,8 @@ pub export fn ygNodeGetContext(node: YGNodeConstRef) ?*anyopaque {
 }
 
 /// Sets measure function
-pub export fn ygNodeSetMeasureFunc(node: YGNodeRef, measureFunc: ?YGMeasureFunc) void {
-    c.YGNodeSetMeasureFunc(node, measureFunc);
+pub export fn ygNodeSetMeasureFunc(node: YGNodeRef, measureFunc: ?*const anyopaque) void {
+    c.YGNodeSetMeasureFunc(node, @alignCast(@ptrCast(measureFunc)));
 }
 
 /// Checks if node has measure function
@@ -728,8 +728,8 @@ pub export fn ygNodeHasMeasureFunc(node: YGNodeConstRef) bool {
 }
 
 /// Sets baseline function
-pub export fn ygNodeSetBaselineFunc(node: YGNodeRef, baselineFunc: ?YGBaselineFunc) void {
-    c.YGNodeSetBaselineFunc(node, baselineFunc);
+pub export fn ygNodeSetBaselineFunc(node: YGNodeRef, baselineFunc: ?*const anyopaque) void {
+    c.YGNodeSetBaselineFunc(node, @alignCast(@ptrCast(baselineFunc)));
 }
 
 /// Checks if node has baseline function
@@ -738,13 +738,13 @@ pub export fn ygNodeHasBaselineFunc(node: YGNodeConstRef) bool {
 }
 
 /// Sets dirtied callback function
-pub export fn ygNodeSetDirtiedFunc(node: YGNodeRef, dirtiedFunc: ?YGDirtiedFunc) void {
-    c.YGNodeSetDirtiedFunc(node, dirtiedFunc);
+pub export fn ygNodeSetDirtiedFunc(node: YGNodeRef, dirtiedFunc: ?*const anyopaque) void {
+    c.YGNodeSetDirtiedFunc(node, @alignCast(@ptrCast(dirtiedFunc)));
 }
 
 /// Gets dirtied callback function
-pub export fn ygNodeGetDirtiedFunc(node: YGNodeConstRef) ?YGDirtiedFunc {
-    return c.YGNodeGetDirtiedFunc(node);
+pub export fn ygNodeGetDirtiedFunc(node: YGNodeConstRef) ?*const anyopaque {
+    return @ptrCast(c.YGNodeGetDirtiedFunc(node));
 }
 
 /// Sets node type

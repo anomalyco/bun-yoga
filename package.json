@@ -1,5 +1,5 @@
 {
-  "name": "bun-yoga",
+  "name": "@yoga/yoga",
   "version": "0.1.0",
   "description": "FFI wrapper for Yoga-Layout",
   "repository": {
@@ -20,9 +20,9 @@
     "build:dev": "cd src/zig && zig build -Doptimize=Debug",
     "build:prod": "cd src/zig && zig build -Doptimize=ReleaseFast",
     "build": "bun run build:native && bun run build:lib",
-    "build:lib": "node scripts/build.mjs --lib",
-    "build:native": "node scripts/build.mjs --native",
-    "build:native:dev": "node scripts/build.mjs --native --dev",
+    "build:lib": "bun run scripts/build.ts --lib",
+    "build:native": "bun run scripts/build.ts --native",
+    "build:native:dev": "bun run scripts/build.ts --native --dev",
     "publish": "node scripts/publish.mjs",
     "publish:dry-run": "node scripts/publish.mjs --dry-run"
   },

@@ -10,8 +10,8 @@
 
 import { test, expect } from 'bun:test';
 import { instrinsicSizeMeasureFunc } from '../tools/utils.ts'
-import Yoga from '../../compat.ts';
 import {
+  Yoga,
   Align,
   BoxSizing,
   Direction,
@@ -27,7 +27,7 @@ import {
   PositionType,
   Unit,
   Wrap,
-} from '../../compat.ts';
+} from '../../index.ts';
 
 test('flex_basis_flex_grow_column', () => {
   const config = Yoga.Config.create();

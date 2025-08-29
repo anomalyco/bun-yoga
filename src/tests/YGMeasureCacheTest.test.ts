@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import Yoga from 'yoga-layout';
-
+import { test, expect } from 'bun:test';
+import { Yoga } from '../index.ts';
 import {getMeasureCounterMax} from './tools/MeasureCounter.ts';
 
 test('measure_once_single_flexible_child', () => {

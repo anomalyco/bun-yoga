@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import Yoga from 'yoga-layout';
+import { test, expect } from 'bun:test';
+import { Yoga } from '../index.ts';
 
 test('new_layout_can_be_marked_seen', () => {
   const root = Yoga.Node.create();

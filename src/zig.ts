@@ -1,50 +1,7 @@
 import { dlopen, type Pointer } from "bun:ffi";
-import { existsSync } from "fs";
 
-// Utility function to get target-specific library path
-function getTargetLibPath(): string {
-  let platform: string;
-  let arch: string;
-
-  switch (process.platform) {
-    case "darwin":
-      platform = "macos";
-      break;
-    case "linux":
-      platform = "linux";
-      break;
-    case "win32":
-      platform = "windows";
-      break;
-    default:
-      throw new Error(`Unsupported platform: ${process.platform}`);
-  }
-
-  switch (process.arch) {
-    case "arm64":
-      arch = "aarch64";
-      break;
-    case "x64":
-      arch = "x86_64";
-      break;
-    default:
-      throw new Error(`Unsupported architecture: ${process.arch}`);
-  }
-
-  const libFileName = process.platform === "win32" ? "yoga.dll" : "libyoga.dylib";
-  return `../lib/${arch}-${platform}/${libFileName}`;
-}
-
-function getYogaLib(libPath?: string) {
-  const resolvedLibPath = libPath || getTargetLibPath();
-
-  if (!existsSync(resolvedLibPath)) {
-    throw new Error(
-      `Yoga library not found at path: ${resolvedLibPath}. Please build the library first or check the path.`
-    );
-  }
-
-  return dlopen(resolvedLibPath, {
+function getYogaLib(libPath: string) {
+  return dlopen(libPath, {
     // Config functions
     ygConfigNew: {
       args: [],
@@ -553,7 +510,11 @@ export interface YogaNode {
   getParent(): YogaNode | null;
 
   // Layout
-  calculateLayout(availableWidth?: number, availableHeight?: number, direction?: number): void;
+  calculateLayout(
+    availableWidth?: number,
+    availableHeight?: number,
+    direction?: number
+  ): void;
   getHasNewLayout(): boolean;
   setHasNewLayout(hasNewLayout: boolean): void;
   markDirty(): void;
@@ -675,13 +636,14 @@ class YogaNodeImpl implements YogaNode {
 
   clone(): YogaNode {
     const clonedPtr = this.yoga.symbols.ygNodeClone(this.nodePtr);
+    if (!clonedPtr) throw new Error("Failed to clone node");
     return new YogaNodeImpl(this.yoga, clonedPtr);
   }
 
   // Hierarchy
   insertChild(child: YogaNode, index: number): void {
     const childImpl = child as YogaNodeImpl;
-    this.yoga.symbols.ygNodeInsertChild(this.nodePtr, childImpl.nodePtr, BigInt(index));
+    this.yoga.symbols.ygNodeInsertChild(this.nodePtr, childImpl.nodePtr, index);
   }
 
   removeChild(child: YogaNode): void {
@@ -695,11 +657,12 @@ class YogaNodeImpl implements YogaNode {
 
   getChild(index: number): YogaNode | null {
     const childPtr = this.yoga.symbols.ygNodeGetChild(this.nodePtr, index);
-    return childPtr ? new YogaNodeImpl(this.yoga, childPtr) : null;
+    if (!childPtr) return null;
+    return new YogaNodeImpl(this.yoga, childPtr);
   }
 
   getChildCount(): number {
-    return this.yoga.symbols.ygNodeGetChildCount(this.nodePtr);
+    return Number(this.yoga.symbols.ygNodeGetChildCount(this.nodePtr));
   }
 
   getParent(): YogaNode | null {
@@ -708,8 +671,17 @@ class YogaNodeImpl implements YogaNode {
   }
 
   // Layout
-  calculateLayout(availableWidth: number = 0, availableHeight: number = 0, direction: number = 0): void {
-    this.yoga.symbols.ygNodeCalculateLayout(this.nodePtr, availableWidth, availableHeight, direction);
+  calculateLayout(
+    availableWidth: number = 0,
+    availableHeight: number = 0,
+    direction: number = 0
+  ): void {
+    this.yoga.symbols.ygNodeCalculateLayout(
+      this.nodePtr,
+      availableWidth,
+      availableHeight,
+      direction
+    );
   }
 
   getHasNewLayout(): boolean {
@@ -767,7 +739,10 @@ class YogaNodeImpl implements YogaNode {
   }
 
   setJustifyContent(justifyContent: number): void {
-    this.yoga.symbols.ygNodeStyleSetJustifyContent(this.nodePtr, justifyContent);
+    this.yoga.symbols.ygNodeStyleSetJustifyContent(
+      this.nodePtr,
+      justifyContent
+    );
   }
 
   getJustifyContent(): number {
@@ -873,7 +848,11 @@ class YogaNodeImpl implements YogaNode {
   }
 
   setPositionPercent(edge: number, position: number): void {
-    this.yoga.symbols.ygNodeStyleSetPositionPercent(this.nodePtr, edge, position);
+    this.yoga.symbols.ygNodeStyleSetPositionPercent(
+      this.nodePtr,
+      edge,
+      position
+    );
   }
 
   setPositionAuto(edge: number): void {
@@ -990,7 +969,7 @@ class YogaNodeImpl implements YogaNode {
 
 class YogaConfigImpl implements YogaConfig {
   private yoga: ReturnType<typeof getYogaLib>;
-  private configPtr: Pointer;
+  public configPtr: Pointer;
 
   constructor(yoga: ReturnType<typeof getYogaLib>, configPtr: Pointer) {
     this.yoga = yoga;
@@ -1010,7 +989,10 @@ class YogaConfigImpl implements YogaConfig {
   }
 
   setPointScaleFactor(pointScaleFactor: number): void {
-    this.yoga.symbols.ygConfigSetPointScaleFactor(this.configPtr, pointScaleFactor);
+    this.yoga.symbols.ygConfigSetPointScaleFactor(
+      this.configPtr,
+      pointScaleFactor
+    );
   }
 
   getPointScaleFactor(): number {
@@ -1030,29 +1012,33 @@ class YogaLibraryImpl implements YogaLibrary {
   private yoga: ReturnType<typeof getYogaLib>;
   public enums: Record<string, number>;
 
-  constructor(libPath?: string) {
+  constructor(libPath: string) {
     this.yoga = getYogaLib(libPath);
     this.enums = getEnumValues(this.yoga);
   }
 
   createNode(): YogaNode {
     const nodePtr = this.yoga.symbols.ygNodeNew();
+    if (!nodePtr) throw new Error("Failed to create node");
     return new YogaNodeImpl(this.yoga, nodePtr);
   }
 
   createNodeWithConfig(config: YogaConfig): YogaNode {
     const configImpl = config as YogaConfigImpl;
     const nodePtr = this.yoga.symbols.ygNodeNewWithConfig(configImpl.configPtr);
+    if (!nodePtr) throw new Error("Failed to create node with config");
     return new YogaNodeImpl(this.yoga, nodePtr);
   }
 
   createConfig(): YogaConfig {
     const configPtr = this.yoga.symbols.ygConfigNew();
+    if (!configPtr) throw new Error("Failed to create config");
     return new YogaConfigImpl(this.yoga, configPtr);
   }
 
   getDefaultConfig(): YogaConfig {
     const configPtr = this.yoga.symbols.ygConfigGetDefault();
+    if (!configPtr) throw new Error("Failed to get default config");
     return new YogaConfigImpl(this.yoga, configPtr);
   }
 }
@@ -1070,6 +1056,11 @@ export function setYogaLibPath(libPath: string) {
 export function resolveYogaLib(): YogaLibrary {
   if (!yogaLib) {
     try {
+      if (!yogaLibPath) {
+        throw new Error(
+          "Yoga library path not set. Call setYogaLibPath first."
+        );
+      }
       yogaLib = new YogaLibraryImpl(yogaLibPath);
     } catch (error) {
       throw new Error(
@@ -1082,9 +1073,11 @@ export function resolveYogaLib(): YogaLibrary {
   return yogaLib;
 }
 
-// Try eager loading
-try {
-  yogaLib = new YogaLibraryImpl(yogaLibPath);
-} catch (error) {
-  // Suppress eager loading errors
+// Try eager loading only if path is set
+if (yogaLibPath) {
+  try {
+    yogaLib = new YogaLibraryImpl(yogaLibPath);
+  } catch (error) {
+    // Suppress eager loading errors
+  }
 }

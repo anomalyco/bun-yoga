@@ -20,3 +20,4 @@ export const yoga = resolveYogaLib();
 
 // Re-export all types and classes
 export * from "./zig.ts";
+export * from "./compat.ts";

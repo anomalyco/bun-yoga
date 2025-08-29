@@ -113,17 +113,10 @@ fn buildTargetFromQuery(
         .root_source_file = b.path(ROOT_SOURCE_FILE),
         .target = target,
         .optimize = optimize,
-        .link_libc = false,
+        .link_libc = true,
     });
 
-    const zg_dep = b.dependency("zg", .{
-        // .cjk = false,
-        .optimize = optimize,
-        .target = target,
-    });
-    module.addImport("code_point", zg_dep.module("code_point"));
-    module.addImport("Graphemes", zg_dep.module("Graphemes"));
-    module.addImport("DisplayWidth", zg_dep.module("DisplayWidth"));
+    // No external dependencies needed for Yoga FFI
 
     target_output = b.addLibrary(.{
         .name = LIB_NAME,
@@ -133,6 +126,29 @@ fn buildTargetFromQuery(
 
     const target_name = try createTargetName(b.allocator, target.result);
     defer b.allocator.free(target_name);
+
+    // Add Yoga library include paths and link against Yoga static library
+    const yoga_lib_path = try std.fmt.allocPrint(b.allocator, "../../yoga/libs/{s}", .{target_name});
+    defer b.allocator.free(yoga_lib_path);
+
+    const yoga_include_path = try std.fmt.allocPrint(b.allocator, "{s}/include", .{yoga_lib_path});
+    defer b.allocator.free(yoga_include_path);
+
+    // Add include path for Yoga headers
+    target_output.addIncludePath(b.path(yoga_include_path));
+
+    // Link against the Yoga static library
+    if (target.result.os.tag == .windows) {
+        // Windows uses .lib files
+        const lib_file_path = try std.fmt.allocPrint(b.allocator, "{s}/yogacore.lib", .{yoga_lib_path});
+        defer b.allocator.free(lib_file_path);
+        target_output.addObjectFile(b.path(lib_file_path));
+    } else {
+        // Unix-like systems use .a files
+        const lib_file_path = try std.fmt.allocPrint(b.allocator, "{s}/libyogacore.a", .{yoga_lib_path});
+        defer b.allocator.free(lib_file_path);
+        target_output.addObjectFile(b.path(lib_file_path));
+    }
 
     const install_dir = b.addInstallArtifact(target_output, .{
         .dest_dir = .{

@@ -24,11 +24,11 @@
     "build:native": "node scripts/build.mjs --native",
     "build:native:dev": "node scripts/build.mjs --native --dev",
     "publish": "node scripts/publish.mjs",
-    "publish:dry-run": "node scripts/publish.mjs --dry-run",
-    
+    "publish:dry-run": "node scripts/publish.mjs --dry-run"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "yoga-layout": "^3.2.1"
   },
   "peerDependencies": {
     "typescript": "^5"

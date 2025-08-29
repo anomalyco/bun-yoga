@@ -23,6 +23,10 @@
     "build:lib": "bun run scripts/build.ts --lib",
     "build:native": "bun run scripts/build.ts --native",
     "build:native:dev": "bun run scripts/build.ts --native --dev",
+    "build:native:current": "bun run scripts/build.ts --native --native-only",
+    "build:native:current:dev": "bun run scripts/build.ts --native --native-only --dev",
+    "build:current": "bun run build:native:current && bun run build:lib",
+    "build:current:dev": "bun run build:native:current:dev && bun run build:lib",
     "publish": "node scripts/publish.mjs",
     "publish:dry-run": "node scripts/publish.mjs --dry-run"
   },

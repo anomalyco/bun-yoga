@@ -50,8 +50,13 @@ const buildLib = args.find((arg) => arg === "--lib");
 const buildNative = args.find((arg) => arg === "--native");
 const isDev = args.includes("--dev");
 const isCi = args.includes("--ci");
+const nativeOnly = args.includes("--native-only");
+const targetPlatform = args
+  .find((arg) => arg.startsWith("--platform="))
+  ?.split("=")[1];
+const targetArch = args.find((arg) => arg.startsWith("--arch="))?.split("=")[1];
 
-const variants: Variant[] = [
+const allVariants: Variant[] = [
   { platform: "darwin", arch: "x64" },
   { platform: "darwin", arch: "arm64" },
   { platform: "linux", arch: "x64" },
@@ -59,6 +64,58 @@ const variants: Variant[] = [
   { platform: "win32", arch: "x64" },
   { platform: "win32", arch: "arm64" },
 ];
+
+const getCurrentSystemVariant = (): Variant => {
+  const platform = process.platform;
+  const arch =
+    process.arch === "x64"
+      ? "x64"
+      : process.arch === "arm64"
+      ? "arm64"
+      : process.arch;
+
+  return { platform, arch };
+};
+
+const getFilteredVariants = (): Variant[] => {
+  if (nativeOnly) {
+    const currentVariant = getCurrentSystemVariant();
+    console.log(
+      `Building for current system only: ${currentVariant.platform}-${currentVariant.arch}`
+    );
+    return [currentVariant];
+  }
+
+  if (targetPlatform || targetArch) {
+    const filtered = allVariants.filter((variant) => {
+      if (targetPlatform && variant.platform !== targetPlatform) return false;
+      if (targetArch && variant.arch !== targetArch) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      console.error(
+        `Error: No variants found for platform=${
+          targetPlatform || "any"
+        } arch=${targetArch || "any"}`
+      );
+      console.error("Available variants:");
+      allVariants.forEach((v) => console.error(`  ${v.platform}-${v.arch}`));
+      process.exit(1);
+    }
+
+    console.log(
+      `Building for filtered targets: ${filtered
+        .map((v) => `${v.platform}-${v.arch}`)
+        .join(", ")}`
+    );
+    return filtered;
+  }
+
+  return allVariants;
+};
+
+const variants = getFilteredVariants();
 
 if (!buildLib && !buildNative) {
   console.error("Error: Please specify --lib, --native, or both");
@@ -105,14 +162,23 @@ if (missingRequired.length > 0) {
 if (buildNative) {
   console.log(`Building native ${isDev ? "dev" : "prod"} binaries...`);
 
-  const zigBuild: SpawnSyncReturns<Buffer> = spawnSync(
-    "zig",
-    ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`],
-    {
-      cwd: join(rootDir, "src", "zig"),
-      stdio: "inherit",
-    }
-  );
+  const zigArgs = ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`];
+
+  // Add native-only flag if specified
+  if (nativeOnly) {
+    zigArgs.push("-Dnative-only=true");
+  }
+
+  // Add specific target if specified
+  if (targetPlatform && targetArch && variants.length === 1) {
+    const zigTarget = getZigTarget(targetPlatform, targetArch);
+    zigArgs.push(`-Dtarget=${zigTarget}`);
+  }
+
+  const zigBuild: SpawnSyncReturns<Buffer> = spawnSync("zig", zigArgs, {
+    cwd: join(rootDir, "src", "zig"),
+    stdio: "inherit",
+  });
 
   if (zigBuild.error) {
     console.error("Error: Zig is not installed or not in PATH");

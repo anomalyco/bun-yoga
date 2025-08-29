@@ -23,9 +23,14 @@ const SUPPORTED_TARGETS = [_]SupportedTarget{
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .description = "Linux x86_64" },
     .{ .cpu_arch = .x86_64, .os_tag = .macos, .description = "macOS x86_64 (Intel)" },
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .description = "macOS aarch64 (Apple Silicon)" },
+    .{ .cpu_arch = .aarch64, .os_tag = .linux, .description = "Linux aarch64" },
+    // Windows targets excluded from default cross-compilation due to system library requirements
+    // Use separate build scripts or native Windows builds for Windows targets
+};
+
+const WINDOWS_TARGETS = [_]SupportedTarget{
     .{ .cpu_arch = .x86_64, .os_tag = .windows, .description = "Windows x86_64" },
     .{ .cpu_arch = .aarch64, .os_tag = .windows, .description = "Windows aarch64" },
-    .{ .cpu_arch = .aarch64, .os_tag = .linux, .description = "Linux aarch64" },
 };
 
 const LIB_NAME = "yoga";
@@ -69,15 +74,41 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization level (Debug, ReleaseFast, ReleaseSafe, ReleaseSmall)") orelse .Debug;
     const target_option = b.option([]const u8, "target", "Build for specific target (e.g., 'x86_64-linux'). If not specified, builds for all supported targets.");
+    const native_only = b.option(bool, "native-only", "Build only for the current system architecture and OS") orelse false;
 
     if (target_option) |target_str| {
         buildSingleTarget(b, target_str, optimize) catch |err| {
             std.debug.print("Error building target '{s}': {}\n", .{ target_str, err });
             std.process.exit(1);
         };
+    } else if (native_only) {
+        buildNativeTarget(b, optimize);
     } else {
         buildAllTargets(b, optimize);
     }
+
+    // Windows builds are excluded from default cross-compilation
+    // Use `zig build -Dtarget=x86_64-windows` for specific Windows builds (requires proper environment)
+}
+
+fn buildNativeTarget(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
+    // Use default/native target
+    const target_query = std.Target.Query{};
+    const resolved_target = b.resolveTargetQuery(target_query);
+
+    const description = std.fmt.allocPrint(b.allocator, "Native target: {s}-{s}", .{
+        @tagName(resolved_target.result.cpu.arch),
+        @tagName(resolved_target.result.os.tag),
+    }) catch |err| {
+        std.debug.print("Failed to allocate description string: {}\n", .{err});
+        std.process.exit(1);
+    };
+    defer b.allocator.free(description);
+
+    buildTargetFromQuery(b, target_query, description, optimize) catch |err| {
+        std.debug.print("Failed to build native target: {}\n", .{err});
+        std.process.exit(1);
+    };
 }
 
 fn buildAllTargets(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
@@ -113,7 +144,7 @@ fn buildTargetFromQuery(
         .root_source_file = b.path(ROOT_SOURCE_FILE),
         .target = target,
         .optimize = optimize,
-        .link_libc = true,
+        .link_libc = target.result.os.tag != .windows, // Skip libc for Windows cross-compilation
     });
 
     // No external dependencies needed for Yoga FFI
@@ -124,8 +155,7 @@ fn buildTargetFromQuery(
         .linkage = .dynamic,
     });
 
-    // Link C++ standard library for Yoga C++ code
-    target_output.linkLibCpp();
+    // C++ linking is now handled in the platform-specific section below
 
     const target_name = try createTargetName(b.allocator, target.result);
     defer b.allocator.free(target_name);
@@ -146,11 +176,17 @@ fn buildTargetFromQuery(
         const lib_file_path = try std.fmt.allocPrint(b.allocator, "{s}/yogacore.lib", .{yoga_lib_path});
         defer b.allocator.free(lib_file_path);
         target_output.addObjectFile(b.path(lib_file_path));
+
+        // Skip Windows system libraries for cross-compilation
+        // These would be linked during native Windows builds
     } else {
         // Unix-like systems use .a files
         const lib_file_path = try std.fmt.allocPrint(b.allocator, "{s}/libyogacore.a", .{yoga_lib_path});
         defer b.allocator.free(lib_file_path);
         target_output.addObjectFile(b.path(lib_file_path));
+
+        // Link C++ standard library for Unix systems
+        target_output.linkLibCpp();
     }
 
     const install_dir = b.addInstallArtifact(target_output, .{

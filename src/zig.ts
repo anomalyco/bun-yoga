@@ -1,5 +1,135 @@
 import { dlopen, type Pointer, JSCallback, FFIType } from "bun:ffi";
 
+// Yoga enum definitions copied from yoga-layout package
+// Copyright (c) Meta Platforms, Inc. and affiliates.
+// This source code is licensed under the MIT license
+
+export const Align = {
+  Auto: 0,
+  FlexStart: 1,
+  Center: 2,
+  FlexEnd: 3,
+  Stretch: 4,
+  Baseline: 5,
+  SpaceBetween: 6,
+  SpaceAround: 7,
+  SpaceEvenly: 8,
+} as const;
+
+export const BoxSizing = {
+  BorderBox: 0,
+  ContentBox: 1,
+} as const;
+
+export const Dimension = {
+  Width: 0,
+  Height: 1,
+} as const;
+
+export const Direction = {
+  Inherit: 0,
+  LTR: 1,
+  RTL: 2,
+} as const;
+
+export const Display = {
+  Flex: 0,
+  None: 1,
+  Contents: 2,
+} as const;
+
+export const Edge = {
+  Left: 0,
+  Top: 1,
+  Right: 2,
+  Bottom: 3,
+  Start: 4,
+  End: 5,
+  Horizontal: 6,
+  Vertical: 7,
+  All: 8,
+} as const;
+
+export const Errata = {
+  None: 0,
+  StretchFlexBasis: 1,
+  AbsolutePositionWithoutInsetsExcludesPadding: 2,
+  AbsolutePercentAgainstInnerSize: 4,
+  All: 2147483647,
+  Classic: 2147483646,
+} as const;
+
+export const ExperimentalFeature = {
+  WebFlexBasis: 0,
+} as const;
+
+export const FlexDirection = {
+  Column: 0,
+  ColumnReverse: 1,
+  Row: 2,
+  RowReverse: 3,
+} as const;
+
+export const Gutter = {
+  Column: 0,
+  Row: 1,
+  All: 2,
+} as const;
+
+export const Justify = {
+  FlexStart: 0,
+  Center: 1,
+  FlexEnd: 2,
+  SpaceBetween: 3,
+  SpaceAround: 4,
+  SpaceEvenly: 5,
+} as const;
+
+export const LogLevel = {
+  Error: 0,
+  Warn: 1,
+  Info: 2,
+  Debug: 3,
+  Verbose: 4,
+  Fatal: 5,
+} as const;
+
+export const MeasureMode = {
+  Undefined: 0,
+  Exactly: 1,
+  AtMost: 2,
+} as const;
+
+export const NodeType = {
+  Default: 0,
+  Text: 1,
+} as const;
+
+export const Overflow = {
+  Visible: 0,
+  Hidden: 1,
+  Scroll: 2,
+} as const;
+
+export const PositionType = {
+  Static: 0,
+  Relative: 1,
+  Absolute: 2,
+} as const;
+
+export const Unit = {
+  Undefined: 0,
+  Point: 1,
+  Percent: 2,
+  Auto: 3,
+} as const;
+
+export const Wrap = {
+  NoWrap: 0,
+  Wrap: 1,
+  WrapReverse: 2,
+} as const;
+
 function getYogaLib(libPath: string) {
   return dlopen(libPath, {
     // Config functions
@@ -418,124 +548,134 @@ function getYogaLib(libPath: string) {
       returns: "ptr", // Returns YGSize struct as pointer
     },
 
-    // Enum value getters
-    ygDirectionInherit: { args: [], returns: "i32" },
-    ygDirectionLTR: { args: [], returns: "i32" },
-    ygDirectionRTL: { args: [], returns: "i32" },
-    ygFlexDirectionColumn: { args: [], returns: "i32" },
-    ygFlexDirectionColumnReverse: { args: [], returns: "i32" },
-    ygFlexDirectionRow: { args: [], returns: "i32" },
-    ygFlexDirectionRowReverse: { args: [], returns: "i32" },
-    ygJustifyFlexStart: { args: [], returns: "i32" },
-    ygJustifyCenter: { args: [], returns: "i32" },
-    ygJustifyFlexEnd: { args: [], returns: "i32" },
-    ygJustifySpaceBetween: { args: [], returns: "i32" },
-    ygJustifySpaceAround: { args: [], returns: "i32" },
-    ygJustifySpaceEvenly: { args: [], returns: "i32" },
-    ygAlignAuto: { args: [], returns: "i32" },
-    ygAlignFlexStart: { args: [], returns: "i32" },
-    ygAlignCenter: { args: [], returns: "i32" },
-    ygAlignFlexEnd: { args: [], returns: "i32" },
-    ygAlignStretch: { args: [], returns: "i32" },
-    ygAlignBaseline: { args: [], returns: "i32" },
-    ygAlignSpaceBetween: { args: [], returns: "i32" },
-    ygAlignSpaceAround: { args: [], returns: "i32" },
-    ygAlignSpaceEvenly: { args: [], returns: "i32" },
-    ygPositionTypeStatic: { args: [], returns: "i32" },
-    ygPositionTypeRelative: { args: [], returns: "i32" },
-    ygPositionTypeAbsolute: { args: [], returns: "i32" },
-    ygWrapNoWrap: { args: [], returns: "i32" },
-    ygWrapWrap: { args: [], returns: "i32" },
-    ygWrapWrapReverse: { args: [], returns: "i32" },
-    ygOverflowVisible: { args: [], returns: "i32" },
-    ygOverflowHidden: { args: [], returns: "i32" },
-    ygOverflowScroll: { args: [], returns: "i32" },
-    ygDisplayFlex: { args: [], returns: "i32" },
-    ygDisplayNone: { args: [], returns: "i32" },
-    ygDisplayContents: { args: [], returns: "i32" },
-    ygEdgeLeft: { args: [], returns: "i32" },
-    ygEdgeTop: { args: [], returns: "i32" },
-    ygEdgeRight: { args: [], returns: "i32" },
-    ygEdgeBottom: { args: [], returns: "i32" },
-    ygEdgeStart: { args: [], returns: "i32" },
-    ygEdgeEnd: { args: [], returns: "i32" },
-    ygEdgeHorizontal: { args: [], returns: "i32" },
-    ygEdgeVertical: { args: [], returns: "i32" },
-    ygEdgeAll: { args: [], returns: "i32" },
+    // Layout result functions (these exist in Yoga)
+    ygNodeLayoutGetBorder: {
+      args: ["ptr", "i32"],
+      returns: "f32",
+    },
+    ygNodeLayoutGetMargin: {
+      args: ["ptr", "i32"],
+      returns: "f32",
+    },
+    ygNodeLayoutGetPadding: {
+      args: ["ptr", "i32"],
+      returns: "f32",
+    },
   });
 }
 
-// Yoga enum constants (cached for performance)
-let _enumCache: Record<string, number> | null = null;
+// Create enum values object using imported enums
+const enumValues = {
+  // Direction
+  DirectionInherit: Direction.Inherit,
+  DirectionLTR: Direction.LTR,
+  DirectionRTL: Direction.RTL,
 
-function getEnumValues(yoga: ReturnType<typeof getYogaLib>) {
-  if (_enumCache) return _enumCache;
+  // FlexDirection
+  FlexDirectionColumn: FlexDirection.Column,
+  FlexDirectionColumnReverse: FlexDirection.ColumnReverse,
+  FlexDirectionRow: FlexDirection.Row,
+  FlexDirectionRowReverse: FlexDirection.RowReverse,
 
-  _enumCache = {
-    // Direction
-    DirectionInherit: yoga.symbols.ygDirectionInherit(),
-    DirectionLTR: yoga.symbols.ygDirectionLTR(),
-    DirectionRTL: yoga.symbols.ygDirectionRTL(),
+  // Justify
+  JustifyFlexStart: Justify.FlexStart,
+  JustifyCenter: Justify.Center,
+  JustifyFlexEnd: Justify.FlexEnd,
+  JustifySpaceBetween: Justify.SpaceBetween,
+  JustifySpaceAround: Justify.SpaceAround,
+  JustifySpaceEvenly: Justify.SpaceEvenly,
 
-    // FlexDirection
-    FlexDirectionColumn: yoga.symbols.ygFlexDirectionColumn(),
-    FlexDirectionColumnReverse: yoga.symbols.ygFlexDirectionColumnReverse(),
-    FlexDirectionRow: yoga.symbols.ygFlexDirectionRow(),
-    FlexDirectionRowReverse: yoga.symbols.ygFlexDirectionRowReverse(),
+  // Align
+  AlignAuto: Align.Auto,
+  AlignFlexStart: Align.FlexStart,
+  AlignCenter: Align.Center,
+  AlignFlexEnd: Align.FlexEnd,
+  AlignStretch: Align.Stretch,
+  AlignBaseline: Align.Baseline,
+  AlignSpaceBetween: Align.SpaceBetween,
+  AlignSpaceAround: Align.SpaceAround,
+  AlignSpaceEvenly: Align.SpaceEvenly,
 
-    // Justify
-    JustifyFlexStart: yoga.symbols.ygJustifyFlexStart(),
-    JustifyCenter: yoga.symbols.ygJustifyCenter(),
-    JustifyFlexEnd: yoga.symbols.ygJustifyFlexEnd(),
-    JustifySpaceBetween: yoga.symbols.ygJustifySpaceBetween(),
-    JustifySpaceAround: yoga.symbols.ygJustifySpaceAround(),
-    JustifySpaceEvenly: yoga.symbols.ygJustifySpaceEvenly(),
+  // PositionType
+  PositionTypeStatic: PositionType.Static,
+  PositionTypeRelative: PositionType.Relative,
+  PositionTypeAbsolute: PositionType.Absolute,
 
-    // Align
-    AlignAuto: yoga.symbols.ygAlignAuto(),
-    AlignFlexStart: yoga.symbols.ygAlignFlexStart(),
-    AlignCenter: yoga.symbols.ygAlignCenter(),
-    AlignFlexEnd: yoga.symbols.ygAlignFlexEnd(),
-    AlignStretch: yoga.symbols.ygAlignStretch(),
-    AlignBaseline: yoga.symbols.ygAlignBaseline(),
-    AlignSpaceBetween: yoga.symbols.ygAlignSpaceBetween(),
-    AlignSpaceAround: yoga.symbols.ygAlignSpaceAround(),
-    AlignSpaceEvenly: yoga.symbols.ygAlignSpaceEvenly(),
+  // Wrap
+  WrapNoWrap: Wrap.NoWrap,
+  WrapWrap: Wrap.Wrap,
+  WrapWrapReverse: Wrap.WrapReverse,
 
-    // PositionType
-    PositionTypeStatic: yoga.symbols.ygPositionTypeStatic(),
-    PositionTypeRelative: yoga.symbols.ygPositionTypeRelative(),
-    PositionTypeAbsolute: yoga.symbols.ygPositionTypeAbsolute(),
+  // Overflow
+  OverflowVisible: Overflow.Visible,
+  OverflowHidden: Overflow.Hidden,
+  OverflowScroll: Overflow.Scroll,
 
-    // Wrap
-    WrapNoWrap: yoga.symbols.ygWrapNoWrap(),
-    WrapWrap: yoga.symbols.ygWrapWrap(),
-    WrapWrapReverse: yoga.symbols.ygWrapWrapReverse(),
+  // Display
+  DisplayFlex: Display.Flex,
+  DisplayNone: Display.None,
+  DisplayContents: Display.Contents,
 
-    // Overflow
-    OverflowVisible: yoga.symbols.ygOverflowVisible(),
-    OverflowHidden: yoga.symbols.ygOverflowHidden(),
-    OverflowScroll: yoga.symbols.ygOverflowScroll(),
+  // Edge
+  EdgeLeft: Edge.Left,
+  EdgeTop: Edge.Top,
+  EdgeRight: Edge.Right,
+  EdgeBottom: Edge.Bottom,
+  EdgeStart: Edge.Start,
+  EdgeEnd: Edge.End,
+  EdgeHorizontal: Edge.Horizontal,
+  EdgeVertical: Edge.Vertical,
+  EdgeAll: Edge.All,
 
-    // Display
-    DisplayFlex: yoga.symbols.ygDisplayFlex(),
-    DisplayNone: yoga.symbols.ygDisplayNone(),
-    DisplayContents: yoga.symbols.ygDisplayContents(),
+  // Additional enums that might be useful
+  // BoxSizing
+  BoxSizingBorderBox: BoxSizing.BorderBox,
+  BoxSizingContentBox: BoxSizing.ContentBox,
 
-    // Edge
-    EdgeLeft: yoga.symbols.ygEdgeLeft(),
-    EdgeTop: yoga.symbols.ygEdgeTop(),
-    EdgeRight: yoga.symbols.ygEdgeRight(),
-    EdgeBottom: yoga.symbols.ygEdgeBottom(),
-    EdgeStart: yoga.symbols.ygEdgeStart(),
-    EdgeEnd: yoga.symbols.ygEdgeEnd(),
-    EdgeHorizontal: yoga.symbols.ygEdgeHorizontal(),
-    EdgeVertical: yoga.symbols.ygEdgeVertical(),
-    EdgeAll: yoga.symbols.ygEdgeAll(),
-  };
+  // Dimension
+  DimensionWidth: Dimension.Width,
+  DimensionHeight: Dimension.Height,
 
-  return _enumCache;
-}
+  // Errata
+  ErrataNone: Errata.None,
+  ErrataStretchFlexBasis: Errata.StretchFlexBasis,
+  ErrataAbsolutePositionWithoutInsetsExcludesPadding:
+    Errata.AbsolutePositionWithoutInsetsExcludesPadding,
+  ErrataAbsolutePercentAgainstInnerSize: Errata.AbsolutePercentAgainstInnerSize,
+  ErrataAll: Errata.All,
+  ErrataClassic: Errata.Classic,
+
+  // ExperimentalFeature
+  ExperimentalFeatureWebFlexBasis: ExperimentalFeature.WebFlexBasis,
+
+  // Gutter
+  GutterColumn: Gutter.Column,
+  GutterRow: Gutter.Row,
+  GutterAll: Gutter.All,
+
+  // LogLevel
+  LogLevelError: LogLevel.Error,
+  LogLevelWarn: LogLevel.Warn,
+  LogLevelInfo: LogLevel.Info,
+  LogLevelDebug: LogLevel.Debug,
+  LogLevelVerbose: LogLevel.Verbose,
+  LogLevelFatal: LogLevel.Fatal,
+
+  // MeasureMode
+  MeasureModeUndefined: MeasureMode.Undefined,
+  MeasureModeExactly: MeasureMode.Exactly,
+  MeasureModeAtMost: MeasureMode.AtMost,
+
+  // NodeType
+  NodeTypeDefault: NodeType.Default,
+  NodeTypeText: NodeType.Text,
+
+  // Unit
+  UnitUndefined: Unit.Undefined,
+  UnitPoint: Unit.Point,
+  UnitPercent: Unit.Percent,
+  UnitAuto: Unit.Auto,
+};
 
 // High-level TypeScript interface
 export interface YogaNode {
@@ -1204,13 +1344,15 @@ export interface YogaLibrary {
   enums: Record<string, number>;
 }
 
+// Enum types are already exported above as const objects
+
 class YogaLibraryImpl implements YogaLibrary {
   private yoga: ReturnType<typeof getYogaLib>;
   public enums: Record<string, number>;
 
   constructor(libPath: string) {
     this.yoga = getYogaLib(libPath);
-    this.enums = getEnumValues(this.yoga);
+    this.enums = enumValues;
   }
 
   createNode(): YogaNode {
@@ -1247,6 +1389,10 @@ export function setYogaLibPath(libPath: string) {
     yogaLibPath = libPath;
     yogaLib = undefined;
   }
+}
+
+export function clearYogaLibCache() {
+  yogaLib = undefined;
 }
 
 export function resolveYogaLib(): YogaLibrary {

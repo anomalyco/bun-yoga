@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FlexDirection, MeasureMode} from 'yoga-layout';
+import {FlexDirection, MeasureMode} from '../../compat.ts';
 
 type MeasureContext = {
   text: string;

@@ -124,6 +124,9 @@ fn buildTargetFromQuery(
         .linkage = .dynamic,
     });
 
+    // Link C++ standard library for Yoga C++ code
+    target_output.linkLibCpp();
+
     const target_name = try createTargetName(b.allocator, target.result);
     defer b.allocator.free(target_name);
 

@@ -367,11 +367,8 @@ if (buildLib) {
   );
 
   if (tscResult.status !== 0) {
-    if (isCi) {
-      console.error("Error: TypeScript declaration generation failed");
-      process.exit(1);
-    }
-    console.warn("Warning: TypeScript declaration generation failed");
+    console.error("Error: TypeScript declaration generation failed");
+    process.exit(1);
   } else {
     console.log("TypeScript declarations generated");
   }

@@ -1,4 +1,4 @@
-import { dlopen, type Pointer } from "bun:ffi";
+import { dlopen, type Pointer, JSCallback, FFIType } from "bun:ffi";
 
 function getYogaLib(libPath: string) {
   return dlopen(libPath, {
@@ -374,6 +374,50 @@ function getYogaLib(libPath: string) {
       returns: "ptr",
     },
 
+    // Callback functions
+    ygNodeSetMeasureFunc: {
+      args: ["ptr", "ptr"],
+      returns: "void",
+    },
+    ygNodeUnsetMeasureFunc: {
+      args: ["ptr"],
+      returns: "void",
+    },
+    ygNodeHasMeasureFunc: {
+      args: ["ptr"],
+      returns: "bool",
+    },
+    ygNodeSetBaselineFunc: {
+      args: ["ptr", "ptr"],
+      returns: "void",
+    },
+    ygNodeUnsetBaselineFunc: {
+      args: ["ptr"],
+      returns: "void",
+    },
+    ygNodeHasBaselineFunc: {
+      args: ["ptr"],
+      returns: "bool",
+    },
+    ygNodeSetDirtiedFunc: {
+      args: ["ptr", "ptr"],
+      returns: "void",
+    },
+    ygNodeUnsetDirtiedFunc: {
+      args: ["ptr"],
+      returns: "void",
+    },
+    ygNodeGetDirtiedFunc: {
+      args: ["ptr"],
+      returns: "ptr",
+    },
+
+    // Callback helper functions
+    ygCreateSize: {
+      args: ["f32", "f32"],
+      returns: "ptr", // Returns YGSize struct as pointer
+    },
+
     // Enum value getters
     ygDirectionInherit: { args: [], returns: "i32" },
     ygDirectionLTR: { args: [], returns: "i32" },
@@ -601,6 +645,17 @@ export interface YogaNode {
   // Context
   setContext(context: any): void;
   getContext(): any;
+
+  // Callback functions
+  setMeasureFunc(measureFunc: MeasureFunction | null): void;
+  unsetMeasureFunc(): void;
+  hasMeasureFunc(): boolean;
+  setBaselineFunc(baselineFunc: BaselineFunction | null): void;
+  unsetBaselineFunc(): void;
+  hasBaselineFunc(): boolean;
+  setDirtiedFunc(dirtiedFunc: DirtiedFunction | null): void;
+  unsetDirtiedFunc(): void;
+  getDirtiedFunc(): DirtiedFunction | null;
 }
 
 export interface YogaConfig {
@@ -611,10 +666,23 @@ export interface YogaConfig {
   getPointScaleFactor(): number;
 }
 
+// Callback function types
+export type MeasureFunction = (
+  width: number,
+  widthMode: number,
+  height: number,
+  heightMode: number
+) => { width: number; height: number };
+export type BaselineFunction = (width: number, height: number) => number;
+export type DirtiedFunction = () => void;
+
 class YogaNodeImpl implements YogaNode {
   private yoga: ReturnType<typeof getYogaLib>;
   private nodePtr: Pointer;
   private contextMap: WeakMap<Pointer, any> = new WeakMap();
+  private measureCallback: JSCallback | null = null;
+  private baselineCallback: JSCallback | null = null;
+  private dirtiedCallback: JSCallback | null = null;
 
   constructor(yoga: ReturnType<typeof getYogaLib>, nodePtr: Pointer) {
     this.yoga = yoga;
@@ -623,6 +691,10 @@ class YogaNodeImpl implements YogaNode {
 
   // Node management
   free(): void {
+    // Clean up callbacks before freeing the node
+    this.unsetMeasureFunc();
+    this.unsetBaselineFunc();
+    this.unsetDirtiedFunc();
     this.yoga.symbols.ygNodeFree(this.nodePtr);
   }
 
@@ -964,6 +1036,130 @@ class YogaNodeImpl implements YogaNode {
 
   getContext(): any {
     return this.contextMap.get(this.nodePtr);
+  }
+
+  // Callback functions
+  setMeasureFunc(measureFunc: MeasureFunction | null): void {
+    this.unsetMeasureFunc(); // Clean up existing callback
+
+    if (measureFunc) {
+      // Create a single JSCallback that matches Yoga's expected measure function signature
+      this.measureCallback = new JSCallback(
+        (
+          nodePtr: Pointer,
+          width: number,
+          widthMode: number,
+          height: number,
+          heightMode: number
+        ) => {
+          const result = measureFunc(width, widthMode, height, heightMode);
+          // Use the helper function to create a proper YGSize struct
+          return this.yoga.symbols.ygCreateSize(result.width, result.height);
+        },
+        {
+          args: [
+            FFIType.ptr,
+            FFIType.f32,
+            FFIType.u32,
+            FFIType.f32,
+            FFIType.u32,
+          ],
+          returns: FFIType.ptr, // Returns YGSize struct as pointer
+        }
+      );
+
+      if (this.measureCallback.ptr) {
+        this.yoga.symbols.ygNodeSetMeasureFunc(
+          this.nodePtr,
+          this.measureCallback.ptr
+        );
+      }
+    }
+  }
+
+  unsetMeasureFunc(): void {
+    if (this.measureCallback) {
+      this.measureCallback.close();
+      this.measureCallback = null;
+    }
+    this.yoga.symbols.ygNodeUnsetMeasureFunc(this.nodePtr);
+  }
+
+  hasMeasureFunc(): boolean {
+    return this.yoga.symbols.ygNodeHasMeasureFunc(this.nodePtr);
+  }
+
+  setBaselineFunc(baselineFunc: BaselineFunction | null): void {
+    this.unsetBaselineFunc(); // Clean up existing callback
+
+    if (baselineFunc) {
+      // Create a JSCallback that matches Yoga's expected baseline function signature
+      this.baselineCallback = new JSCallback(
+        (nodePtr: Pointer, width: number, height: number) => {
+          return baselineFunc(width, height);
+        },
+        {
+          args: [FFIType.ptr, FFIType.f32, FFIType.f32],
+          returns: FFIType.f32,
+        }
+      );
+
+      if (this.baselineCallback.ptr) {
+        this.yoga.symbols.ygNodeSetBaselineFunc(
+          this.nodePtr,
+          this.baselineCallback.ptr
+        );
+      }
+    }
+  }
+
+  unsetBaselineFunc(): void {
+    if (this.baselineCallback) {
+      this.baselineCallback.close();
+      this.baselineCallback = null;
+    }
+    this.yoga.symbols.ygNodeUnsetBaselineFunc(this.nodePtr);
+  }
+
+  hasBaselineFunc(): boolean {
+    return this.yoga.symbols.ygNodeHasBaselineFunc(this.nodePtr);
+  }
+
+  setDirtiedFunc(dirtiedFunc: DirtiedFunction | null): void {
+    this.unsetDirtiedFunc(); // Clean up existing callback
+
+    if (dirtiedFunc) {
+      // Create a JSCallback that matches Yoga's expected dirtied function signature
+      this.dirtiedCallback = new JSCallback(
+        (nodePtr: Pointer) => {
+          dirtiedFunc();
+        },
+        {
+          args: [FFIType.ptr],
+          returns: FFIType.void,
+        }
+      );
+
+      if (this.dirtiedCallback.ptr) {
+        this.yoga.symbols.ygNodeSetDirtiedFunc(
+          this.nodePtr,
+          this.dirtiedCallback.ptr
+        );
+      }
+    }
+  }
+
+  unsetDirtiedFunc(): void {
+    if (this.dirtiedCallback) {
+      this.dirtiedCallback.close();
+      this.dirtiedCallback = null;
+    }
+    this.yoga.symbols.ygNodeUnsetDirtiedFunc(this.nodePtr);
+  }
+
+  getDirtiedFunc(): DirtiedFunction | null {
+    // We can't retrieve the actual function from FFI, but we can check if we have one stored
+    return this.dirtiedCallback ? () => {} : null;
   }
 }
 

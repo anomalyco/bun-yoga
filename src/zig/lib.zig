@@ -2,14 +2,7 @@ const std = @import("std");
 
 // Import C headers from Yoga
 const c = @cImport({
-    @cInclude("YGMacros.h");
-    @cInclude("YGEnums.h");
-    @cInclude("YGValue.h");
-    @cInclude("YGConfig.h");
-    @cInclude("YGNode.h");
-    @cInclude("YGNodeStyle.h");
-    @cInclude("YGNodeLayout.h");
-    @cInclude("YGPixelGrid.h");
+    @cInclude("Yoga.h");
 });
 
 // Re-export all Yoga types and constants for easier access
@@ -722,6 +715,11 @@ pub export fn ygNodeSetMeasureFunc(node: YGNodeRef, measureFunc: ?*const anyopaq
     c.YGNodeSetMeasureFunc(node, @alignCast(@ptrCast(measureFunc)));
 }
 
+/// Unsets measure function
+pub export fn ygNodeUnsetMeasureFunc(node: YGNodeRef) void {
+    c.YGNodeSetMeasureFunc(node, null);
+}
+
 /// Checks if node has measure function
 pub export fn ygNodeHasMeasureFunc(node: YGNodeConstRef) bool {
     return c.YGNodeHasMeasureFunc(node);
@@ -732,6 +730,11 @@ pub export fn ygNodeSetBaselineFunc(node: YGNodeRef, baselineFunc: ?*const anyop
     c.YGNodeSetBaselineFunc(node, @alignCast(@ptrCast(baselineFunc)));
 }
 
+/// Unsets baseline function
+pub export fn ygNodeUnsetBaselineFunc(node: YGNodeRef) void {
+    c.YGNodeSetBaselineFunc(node, null);
+}
+
 /// Checks if node has baseline function
 pub export fn ygNodeHasBaselineFunc(node: YGNodeConstRef) bool {
     return c.YGNodeHasBaselineFunc(node);
@@ -740,6 +743,11 @@ pub export fn ygNodeHasBaselineFunc(node: YGNodeConstRef) bool {
 /// Sets dirtied callback function
 pub export fn ygNodeSetDirtiedFunc(node: YGNodeRef, dirtiedFunc: ?*const anyopaque) void {
     c.YGNodeSetDirtiedFunc(node, @alignCast(@ptrCast(dirtiedFunc)));
+}
+
+/// Unsets dirtied callback function
+pub export fn ygNodeUnsetDirtiedFunc(node: YGNodeRef) void {
+    c.YGNodeSetDirtiedFunc(node, null);
 }
 
 /// Gets dirtied callback function
@@ -775,6 +783,15 @@ pub export fn ygNodeSetAlwaysFormsContainingBlock(node: YGNodeRef, alwaysFormsCo
 /// Checks if node always forms containing block
 pub export fn ygNodeGetAlwaysFormsContainingBlock(node: YGNodeConstRef) bool {
     return c.YGNodeGetAlwaysFormsContainingBlock(node);
+}
+
+//=============================================================================
+// CALLBACK HELPER FUNCTIONS
+//=============================================================================
+
+/// Helper to create a YGSize struct for measure function results
+pub export fn ygCreateSize(width: f32, height: f32) c.YGSize {
+    return c.YGSize{ .width = width, .height = height };
 }
 
 //=============================================================================

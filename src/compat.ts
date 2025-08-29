@@ -1,6 +1,11 @@
 // Yoga-layout compatible interface
 
-import { resolveYogaLib } from "./zig.ts";
+import {
+  resolveYogaLib,
+  type MeasureFunction as ZigMeasureFunction,
+  type BaselineFunction,
+  type DirtiedFunction as ZigDirtiedFunction,
+} from "./zig.ts";
 
 // Export all the enum types to match yoga-layout
 export enum Align {
@@ -136,7 +141,7 @@ export type Value = {
   valueOf(): number;
 };
 
-// Layout type  
+// Layout type
 export type Layout = {
   left: number;
   right: number;
@@ -158,8 +163,9 @@ export type MeasureFunction = (
   width: number,
   widthMode: MeasureMode,
   height: number,
-  heightMode: MeasureMode,
+  heightMode: MeasureMode
 ) => Size;
+export type BaselineMeasureFunction = (width: number, height: number) => number;
 
 // Helper function to create Value objects
 function createValue(value: number, unit: Unit): Value {
@@ -173,17 +179,23 @@ function createValue(value: number, unit: Unit): Value {
 }
 
 // Helper function to parse string/number values
-function parseValue(input: number | string | 'auto' | undefined): { unit: Unit; value: number } {
+function parseValue(input: number | string | "auto" | undefined): {
+  unit: Unit;
+  value: number;
+} {
   if (input === undefined) {
     return { unit: Unit.Undefined, value: 0 };
   }
-  if (input === 'auto') {
+  if (input === "auto") {
     return { unit: Unit.Auto, value: 0 };
   }
-  if (typeof input === 'string' && input.endsWith('%')) {
+  if (typeof input === "string" && input.endsWith("%")) {
     return { unit: Unit.Percent, value: parseFloat(input) };
   }
-  return { unit: Unit.Point, value: typeof input === 'string' ? parseFloat(input) : input };
+  return {
+    unit: Unit.Point,
+    value: typeof input === "string" ? parseFloat(input) : input,
+  };
 }
 
 // Config implementation
@@ -204,7 +216,10 @@ export class Config {
     return false;
   }
 
-  setExperimentalFeatureEnabled(_feature: ExperimentalFeature, _enabled: boolean): void {
+  setExperimentalFeatureEnabled(
+    _feature: ExperimentalFeature,
+    _enabled: boolean
+  ): void {
     // Not implemented in our Yoga FFI, no-op
   }
 
@@ -218,7 +233,7 @@ export class Config {
   }
 
   setErrata(_errata: Errata): void {
-    // Not implemented in our Yoga FFI, no-op  
+    // Not implemented in our Yoga FFI, no-op
   }
 
   useWebDefaults(): boolean {
@@ -242,6 +257,9 @@ export class Config {
 export class Node {
   private yogaNode: any;
   private config?: Config;
+  private measureFunc?: MeasureFunction | null;
+  private dirtiedFunc?: DirtiedFunction | null;
+  private baselineFunc?: BaselineMeasureFunction | null;
 
   constructor(config?: Config) {
     const yoga = resolveYogaLib();
@@ -255,12 +273,12 @@ export class Node {
 
   // Layout calculation
   calculateLayout(
-    width: number | 'auto' | undefined,
-    height: number | 'auto' | undefined,
-    direction?: Direction,
+    width: number | "auto" | undefined,
+    height: number | "auto" | undefined,
+    direction?: Direction
   ): void {
-    const w = width === 'auto' || width === undefined ? NaN : width;
-    const h = height === 'auto' || height === undefined ? NaN : height;
+    const w = width === "auto" || width === undefined ? NaN : width;
+    const h = height === "auto" || height === undefined ? NaN : height;
     const dir = direction ?? Direction.LTR;
     this.yogaNode.calculateLayout(w, h, dir);
   }
@@ -309,7 +327,7 @@ export class Node {
   getComputedLayout(): Layout {
     return {
       left: this.yogaNode.getComputedLeft(),
-      top: this.yogaNode.getComputedTop(), 
+      top: this.yogaNode.getComputedTop(),
       right: this.yogaNode.getComputedRight(),
       bottom: this.yogaNode.getComputedBottom(),
       width: this.yogaNode.getComputedWidth(),
@@ -411,7 +429,7 @@ export class Node {
   }
 
   // Style setters with value parsing
-  setWidth(width: number | 'auto' | `${number}%` | undefined): void {
+  setWidth(width: number | "auto" | `${number}%` | undefined): void {
     const parsed = parseValue(width);
     switch (parsed.unit) {
       case Unit.Auto:
@@ -436,7 +454,7 @@ export class Node {
     }
   }
 
-  setHeight(height: number | 'auto' | `${number}%` | undefined): void {
+  setHeight(height: number | "auto" | `${number}%` | undefined): void {
     const parsed = parseValue(height);
     switch (parsed.unit) {
       case Unit.Auto:
@@ -500,7 +518,7 @@ export class Node {
     }
   }
 
-  setFlexBasis(flexBasis: number | 'auto' | `${number}%` | undefined): void {
+  setFlexBasis(flexBasis: number | "auto" | `${number}%` | undefined): void {
     const parsed = parseValue(flexBasis);
     switch (parsed.unit) {
       case Unit.Auto:
@@ -581,7 +599,10 @@ export class Node {
   }
 
   // Margin methods
-  setMargin(edge: Edge, margin: number | 'auto' | `${number}%` | undefined): void {
+  setMargin(
+    edge: Edge,
+    margin: number | "auto" | `${number}%` | undefined
+  ): void {
     const parsed = parseValue(margin);
     switch (parsed.unit) {
       case Unit.Auto:
@@ -772,12 +793,13 @@ export class Node {
   }
 
   isReferenceBaseline(): boolean {
-    // Not implemented  
+    // Not implemented
     return false;
   }
 
   markDirty(): void {
     this.yogaNode.markDirty();
+    // The dirtied callback will be called automatically by Yoga through our FFI wrapper
   }
 
   markLayoutSeen(): void {
@@ -792,7 +814,10 @@ export class Node {
     // Not implemented
   }
 
-  setGap(_gutter: Gutter, _gapLength: number | `${number}%` | undefined): Value {
+  setGap(
+    _gutter: Gutter,
+    _gapLength: number | `${number}%` | undefined
+  ): Value {
     // Not implemented
     return createValue(0, Unit.Undefined);
   }
@@ -802,12 +827,43 @@ export class Node {
     return createValue(0, Unit.Undefined);
   }
 
-  setDirtiedFunc(_dirtiedFunc: DirtiedFunction | null): void {
-    // Not implemented in our FFI
+  setDirtiedFunc(dirtiedFunc: DirtiedFunction | null): void {
+    this.dirtiedFunc = dirtiedFunc;
+
+    if (dirtiedFunc) {
+      // Convert yoga-layout DirtiedFunction to our ZigDirtiedFunction
+      const zigDirtiedFunc: ZigDirtiedFunction = () => {
+        dirtiedFunc(this);
+      };
+
+      this.yogaNode.setDirtiedFunc(zigDirtiedFunc);
+    } else {
+      this.yogaNode.unsetDirtiedFunc();
+    }
   }
 
-  setMeasureFunc(_measureFunc: MeasureFunction | null): void {
-    // Not implemented in our FFI
+  setMeasureFunc(measureFunc: MeasureFunction | null): void {
+    this.measureFunc = measureFunc;
+
+    if (measureFunc) {
+      // Convert yoga-layout MeasureFunction to our ZigMeasureFunction
+      const zigMeasureFunc: ZigMeasureFunction = (
+        width,
+        widthMode,
+        height,
+        heightMode
+      ) => {
+        const result = measureFunc(width, widthMode, height, heightMode);
+        return {
+          width: result.width,
+          height: result.height,
+        };
+      };
+
+      this.yogaNode.setMeasureFunc(zigMeasureFunc);
+    } else {
+      this.yogaNode.unsetMeasureFunc();
+    }
   }
 
   setBoxSizing(_boxSizing: BoxSizing): void {
@@ -819,11 +875,33 @@ export class Node {
   }
 
   unsetDirtiedFunc(): void {
-    // Not implemented
+    this.dirtiedFunc = null;
+    this.yogaNode.unsetDirtiedFunc();
   }
 
   unsetMeasureFunc(): void {
-    // Not implemented
+    this.measureFunc = null;
+    this.yogaNode.unsetMeasureFunc();
+  }
+
+  setBaselineFunc(baselineFunc: BaselineMeasureFunction | null): void {
+    this.baselineFunc = baselineFunc;
+
+    if (baselineFunc) {
+      // Convert yoga-layout BaselineMeasureFunction to our BaselineFunction
+      const zigBaselineFunc: BaselineFunction = (width, height) => {
+        return baselineFunc(width, height);
+      };
+
+      this.yogaNode.setBaselineFunc(zigBaselineFunc);
+    } else {
+      this.yogaNode.unsetBaselineFunc();
+    }
+  }
+
+  unsetBaselineFunc(): void {
+    this.baselineFunc = null;
+    this.yogaNode.unsetBaselineFunc();
   }
 
   static create(config?: Config): Node {
@@ -875,8 +953,10 @@ const constants = {
   EDGE_ALL: Edge.All,
   ERRATA_NONE: Errata.None,
   ERRATA_STRETCH_FLEX_BASIS: Errata.StretchFlexBasis,
-  ERRATA_ABSOLUTE_POSITION_WITHOUT_INSETS_EXCLUDES_PADDING: Errata.AbsolutePositionWithoutInsetsExcludesPadding,
-  ERRATA_ABSOLUTE_PERCENT_AGAINST_INNER_SIZE: Errata.AbsolutePercentAgainstInnerSize,
+  ERRATA_ABSOLUTE_POSITION_WITHOUT_INSETS_EXCLUDES_PADDING:
+    Errata.AbsolutePositionWithoutInsetsExcludesPadding,
+  ERRATA_ABSOLUTE_PERCENT_AGAINST_INNER_SIZE:
+    Errata.AbsolutePercentAgainstInnerSize,
   ERRATA_ALL: Errata.All,
   ERRATA_CLASSIC: Errata.Classic,
   EXPERIMENTAL_FEATURE_WEB_FLEX_BASIS: ExperimentalFeature.WebFlexBasis,

@@ -18,6 +18,50 @@ if (!existsSync(targetLibPath)) {
 setYogaLibPath(targetLibPath);
 export const yoga = resolveYogaLib();
 
-// Re-export all types and classes
-export * from "./zig.ts";
-export * from "./compat.ts";
+// Re-export types and classes selectively to avoid conflicts
+export {
+  setYogaLibPath,
+  resolveYogaLib,
+  type YogaNode,
+  type YogaConfig,
+  type YogaLibrary,
+  // Export zig types with different names to avoid conflicts
+  type MeasureFunction as ZigMeasureFunction,
+  type BaselineFunction as ZigBaselineFunction,
+  type DirtiedFunction as ZigDirtiedFunction,
+} from "./zig.ts";
+
+export {
+  // Yoga-layout compatible exports
+  Align,
+  BoxSizing,
+  Dimension,
+  Direction,
+  Display,
+  Edge,
+  Errata,
+  ExperimentalFeature,
+  FlexDirection,
+  Gutter,
+  Justify,
+  LogLevel,
+  MeasureMode,
+  NodeType,
+  Overflow,
+  PositionType,
+  Unit,
+  Wrap,
+  Config,
+  Node,
+  Yoga,
+  // Yoga-layout compatible types
+  type Value,
+  type Layout,
+  type Size,
+  type DirtiedFunction,
+  type MeasureFunction,
+  type BaselineMeasureFunction,
+} from "./compat.ts";
+
+// Default export is the yoga-layout compatible API
+export { default } from "./compat.ts";

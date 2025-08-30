@@ -71,7 +71,7 @@ class PerformanceStats {
 
   private getPercentile(sortedArray: number[], percentile: number): number {
     const index = Math.ceil((percentile / 100) * sortedArray.length) - 1;
-    return sortedArray[Math.max(0, index)];
+    return sortedArray[Math.max(0, index)] ?? 0;
   }
 
   reset(): void {
@@ -344,6 +344,8 @@ class BenchmarkScenarios {
       await this.dynamicComplexityBenchmark();
     this.results["Deep Nested Layout"] = await this.nestedLayoutBenchmark();
     this.results["Complex Flex Layout"] = await this.flexLayoutBenchmark();
+    this.results["Advanced Features Stress Test"] =
+      await this.advancedFeaturesStressTestBenchmark();
 
     this.runner.printSummary(this.results);
     console.log(`\n${colors.green}All benchmarks completed${colors.reset}`);
@@ -359,10 +361,10 @@ class BenchmarkScenarios {
 
         root.setWidth(100);
         root.setHeight(200);
-        root.setPadding("all", 10);
-        root.setMargin("all", 5);
+        root.setPadding(LocalYoga.EDGE_ALL, 10);
+        root.setMargin(LocalYoga.EDGE_ALL, 5);
 
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Get computed layout to ensure calculation happened
         const layout = root.getComputedLayout();
@@ -379,7 +381,7 @@ class BenchmarkScenarios {
         root.setPadding(OfficialYoga.EDGE_ALL, 10);
         root.setMargin(OfficialYoga.EDGE_ALL, 5);
 
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Get computed layout to ensure calculation happened
         const layout = root.getComputedLayout();
@@ -403,21 +405,21 @@ class BenchmarkScenarios {
         // Initial layout
         root.setWidth(100);
         root.setHeight(100);
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Change 1: Resize
         root.setWidth(150);
         root.setHeight(150);
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Change 2: Add padding
-        root.setPadding("all", 20);
-        root.calculateLayout();
+        root.setPadding(LocalYoga.EDGE_ALL, 20);
+        root.calculateLayout(undefined, undefined);
 
         // Change 3: Change flex properties
         root.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
         root.setJustifyContent(LocalYoga.JUSTIFY_CENTER);
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         root.free();
         config.free();
@@ -429,21 +431,21 @@ class BenchmarkScenarios {
         // Initial layout
         root.setWidth(100);
         root.setHeight(100);
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Change 1: Resize
         root.setWidth(150);
         root.setHeight(150);
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Change 2: Add padding
         root.setPadding(OfficialYoga.EDGE_ALL, 20);
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Change 3: Change flex properties
         root.setFlexDirection(OfficialYoga.FLEX_DIRECTION_ROW);
         root.setJustifyContent(OfficialYoga.JUSTIFY_CENTER);
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         root.free();
       }
@@ -470,37 +472,39 @@ class BenchmarkScenarios {
         for (let i = 0; i < 5; i++) {
           const child = new LocalNode(config);
           child.setFlexGrow(1);
-          child.setMargin("all", 2);
+          child.setMargin(LocalYoga.EDGE_ALL, 2);
           root.insertChild(child, i);
           children.push(child);
         }
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Stage 2: Add 10 more children (15 total)
         for (let i = 5; i < 15; i++) {
           const child = new LocalNode(config);
           child.setFlexGrow(1);
-          child.setMargin("all", 2);
-          child.setPadding("all", 5);
+          child.setMargin(LocalYoga.EDGE_ALL, 2);
+          child.setPadding(LocalYoga.EDGE_ALL, 5);
           root.insertChild(child, i);
           children.push(child);
         }
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Stage 3: Add nested children to some nodes
         for (let i = 0; i < 5; i++) {
           const parent = children[i];
-          parent.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
+          if (parent) {
+            parent.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
 
-          for (let j = 0; j < 3; j++) {
-            const grandchild = new LocalNode(config);
-            grandchild.setFlexGrow(1);
-            grandchild.setWidth(20);
-            grandchild.setHeight(20);
-            parent.insertChild(grandchild, j);
+            for (let j = 0; j < 3; j++) {
+              const grandchild = new LocalNode(config);
+              grandchild.setFlexGrow(1);
+              grandchild.setWidth(20);
+              grandchild.setHeight(20);
+              parent.insertChild(grandchild, j);
+            }
           }
         }
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         root.freeRecursive();
         config.free();
@@ -522,7 +526,7 @@ class BenchmarkScenarios {
           root.insertChild(child, i);
           children.push(child);
         }
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Stage 2: Add 10 more children (15 total)
         for (let i = 5; i < 15; i++) {
@@ -533,7 +537,7 @@ class BenchmarkScenarios {
           root.insertChild(child, i);
           children.push(child);
         }
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         // Stage 3: Add nested children to some nodes
         for (let i = 0; i < 5; i++) {
@@ -548,7 +552,7 @@ class BenchmarkScenarios {
             parent.insertChild(grandchild, j);
           }
         }
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
 
         root.freeRecursive();
       }
@@ -574,14 +578,14 @@ class BenchmarkScenarios {
           const level1 = new LocalNode(config);
           level1.setFlexGrow(1);
           level1.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
-          level1.setPadding("all", 5);
+          level1.setPadding(LocalYoga.EDGE_ALL, 5);
           root.insertChild(level1, i);
 
           for (let j = 0; j < 4; j++) {
             const level2 = new LocalNode(config);
             level2.setFlexGrow(1);
             level2.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
-            level2.setMargin("all", 3);
+            level2.setMargin(LocalYoga.EDGE_ALL, 3);
             level1.insertChild(level2, j);
 
             for (let k = 0; k < 3; k++) {
@@ -594,7 +598,7 @@ class BenchmarkScenarios {
           }
         }
 
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
         root.freeRecursive();
         config.free();
       },
@@ -630,7 +634,7 @@ class BenchmarkScenarios {
           }
         }
 
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
         root.freeRecursive();
       }
     );
@@ -659,7 +663,7 @@ class BenchmarkScenarios {
           item.setWidth(60);
           item.setHeight(40);
           item.setFlexShrink(1);
-          item.setMargin("all", 2);
+          item.setMargin(LocalYoga.EDGE_ALL, 2);
 
           // Vary some properties
           if (i % 3 === 0) {
@@ -672,7 +676,7 @@ class BenchmarkScenarios {
           root.insertChild(item, i);
         }
 
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
         root.freeRecursive();
         config.free();
       },
@@ -705,7 +709,7 @@ class BenchmarkScenarios {
           root.insertChild(item, i);
         }
 
-        root.calculateLayout();
+        root.calculateLayout(undefined, undefined);
         root.freeRecursive();
       }
     );
@@ -713,12 +717,397 @@ class BenchmarkScenarios {
     this.runner.printResults("Complex Flex Layout", results);
     return results;
   }
+
+  private async advancedFeaturesStressTestBenchmark(): Promise<BenchmarkComparison> {
+    const results = await this.runner.runBenchmark(
+      "Advanced Features Stress Test - All Layout Features Combined",
+      () => {
+        // Local implementation - Ultra complex scenario
+        const config = new LocalConfig();
+        const root = new LocalNode(config);
+
+        // Root container setup with advanced properties
+        root.setWidth(800);
+        root.setHeight(600);
+        root.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
+        root.setJustifyContent(LocalYoga.JUSTIFY_SPACE_BETWEEN);
+        root.setAlignItems(LocalYoga.ALIGN_STRETCH);
+        root.setPadding(LocalYoga.EDGE_ALL, 20);
+        root.setMargin(LocalYoga.EDGE_ALL, 10);
+        root.setOverflow(LocalYoga.OVERFLOW_SCROLL);
+
+        const containers: LocalNode[] = [];
+
+        // Create 4 main containers with different layout patterns
+        for (let i = 0; i < 4; i++) {
+          const container = new LocalNode(config);
+          container.setFlexGrow(1);
+          container.setFlexShrink(0);
+          container.setFlexBasis("25%");
+          container.setMargin(LocalYoga.EDGE_ALL, 5);
+          container.setPadding(LocalYoga.EDGE_ALL, 10);
+
+          // Vary container properties
+          if (i === 0) {
+            // Horizontal scrolling container
+            container.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
+            container.setFlexWrap(LocalYoga.WRAP_NO_WRAP);
+            container.setOverflow(LocalYoga.OVERFLOW_SCROLL);
+            container.setJustifyContent(LocalYoga.JUSTIFY_FLEX_START);
+          } else if (i === 1) {
+            // Grid-like wrapping container
+            container.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
+            container.setFlexWrap(LocalYoga.WRAP_WRAP);
+            container.setAlignContent(LocalYoga.ALIGN_SPACE_BETWEEN);
+            container.setJustifyContent(LocalYoga.JUSTIFY_SPACE_AROUND);
+          } else if (i === 2) {
+            // Absolute positioned container
+            container.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
+            container.setPositionType(LocalYoga.POSITION_TYPE_RELATIVE);
+            container.setAlignItems(LocalYoga.ALIGN_CENTER);
+          } else {
+            // Complex nested container
+            container.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
+            container.setJustifyContent(LocalYoga.JUSTIFY_SPACE_EVENLY);
+            container.setAlignItems(LocalYoga.ALIGN_STRETCH);
+          }
+
+          root.insertChild(container, i);
+          containers.push(container);
+        }
+
+        // Populate each container with complex children
+        containers.forEach((container, containerIndex) => {
+          const childCount = 8 + containerIndex * 3; // Varying child counts
+
+          for (let j = 0; j < childCount; j++) {
+            const child = new LocalNode(config);
+
+            // Base properties for all children
+            child.setPadding(LocalYoga.EDGE_ALL, 3);
+            child.setMargin(LocalYoga.EDGE_ALL, 2);
+            child.setBorder(LocalYoga.EDGE_ALL, 1);
+
+            // Complex property variations based on position
+            const variation = (containerIndex * childCount + j) % 12;
+
+            switch (variation) {
+              case 0: // Fixed size with aspect ratio
+                child.setWidth(80);
+                child.setAspectRatio(1.5);
+                child.setFlexShrink(0);
+                break;
+              case 1: // Percentage width with min/max constraints
+                child.setWidth("40%");
+                child.setMinWidth(60);
+                child.setMaxWidth(120);
+                child.setHeight(50);
+                break;
+              case 2: // Flex grow with percentage height
+                child.setFlexGrow(2);
+                child.setHeight("15%");
+                child.setMinHeight(30);
+                child.setAlignSelf(LocalYoga.ALIGN_FLEX_START);
+                break;
+              case 3: // Absolute positioned
+                child.setPositionType(LocalYoga.POSITION_TYPE_ABSOLUTE);
+                child.setPosition(LocalYoga.EDGE_LEFT, 10 + j * 5);
+                child.setPosition(LocalYoga.EDGE_TOP, 10 + j * 3);
+                child.setWidth(40);
+                child.setHeight(40);
+                break;
+              case 4: // Complex margin/padding variations
+                child.setFlexGrow(1);
+                child.setMargin(LocalYoga.EDGE_LEFT, 5);
+                child.setMargin(LocalYoga.EDGE_RIGHT, 15);
+                child.setPadding(LocalYoga.EDGE_TOP, 8);
+                child.setPadding(LocalYoga.EDGE_BOTTOM, 12);
+                child.setMinHeight(40);
+                break;
+              case 5: // Percentage-based with aspect ratio
+                child.setWidth("30%");
+                child.setAspectRatio(0.75);
+                child.setFlexShrink(1);
+                child.setAlignSelf(LocalYoga.ALIGN_CENTER);
+                break;
+              case 6: // Max constraints with flex
+                child.setFlexGrow(1);
+                child.setMaxWidth(100);
+                child.setMaxHeight(80);
+                child.setAlignSelf(LocalYoga.ALIGN_FLEX_END);
+                break;
+              case 7: // Hidden/Display variations
+                if (j % 3 === 0) {
+                  child.setDisplay(LocalYoga.DISPLAY_NONE);
+                } else {
+                  child.setDisplay(LocalYoga.DISPLAY_FLEX);
+                  child.setFlexGrow(1);
+                  child.setHeight(35);
+                }
+                break;
+              case 8: // Complex border/padding combinations
+                child.setBorder(LocalYoga.EDGE_LEFT, 3);
+                child.setBorder(LocalYoga.EDGE_RIGHT, 1);
+                child.setPadding(LocalYoga.EDGE_LEFT, 10);
+                child.setPadding(LocalYoga.EDGE_RIGHT, 5);
+                child.setWidth(70);
+                child.setHeight(45);
+                break;
+              case 9: // Nested flex container
+                child.setFlexDirection(LocalYoga.FLEX_DIRECTION_ROW);
+                child.setFlexGrow(1);
+                child.setMinHeight(60);
+                child.setJustifyContent(LocalYoga.JUSTIFY_SPACE_BETWEEN);
+
+                // Add nested children
+                for (let k = 0; k < 3; k++) {
+                  const nested = new LocalNode(config);
+                  nested.setFlexGrow(1);
+                  nested.setHeight(20);
+                  nested.setMargin(LocalYoga.EDGE_ALL, 1);
+                  nested.setAspectRatio(1.0);
+                  child.insertChild(nested, k);
+                }
+                break;
+              case 10: // Overflow and scrolling
+                child.setOverflow(LocalYoga.OVERFLOW_SCROLL);
+                child.setWidth(90);
+                child.setHeight(70);
+                child.setFlexShrink(0);
+                break;
+              case 11: // Complex positioning
+                child.setPositionType(LocalYoga.POSITION_TYPE_RELATIVE);
+                child.setPosition(LocalYoga.EDGE_LEFT, j * 2);
+                child.setFlexGrow(1);
+                child.setMinWidth(50);
+                child.setMaxWidth(150);
+                child.setHeight(55);
+                break;
+            }
+
+            container.insertChild(child, j);
+          }
+        });
+
+        // Multiple layout calculations with property changes
+        root.calculateLayout(undefined, undefined);
+
+        // Dynamic property changes during benchmark
+        containers[0]?.setFlexDirection(LocalYoga.FLEX_DIRECTION_COLUMN);
+        containers[1]?.setJustifyContent(LocalYoga.JUSTIFY_CENTER);
+        root.calculateLayout(undefined, undefined);
+
+        containers[2]?.setAlignItems(LocalYoga.ALIGN_FLEX_END);
+        containers[3]?.setFlexWrap(LocalYoga.WRAP_WRAP_REVERSE);
+        root.calculateLayout(undefined, undefined);
+
+        // Final calculation
+        root.calculateLayout(undefined, undefined);
+
+        // Get layout to ensure calculations happened
+        const layout = root.getComputedLayout();
+
+        root.freeRecursive();
+        config.free();
+      },
+      () => {
+        // Official implementation - Same complex scenario
+        const root = OfficialYoga.Node.create();
+
+        // Root container setup with advanced properties
+        root.setWidth(800);
+        root.setHeight(600);
+        root.setFlexDirection(OfficialYoga.FLEX_DIRECTION_COLUMN);
+        root.setJustifyContent(OfficialYoga.JUSTIFY_SPACE_BETWEEN);
+        root.setAlignItems(OfficialYoga.ALIGN_STRETCH);
+        root.setPadding(OfficialYoga.EDGE_ALL, 20);
+        root.setMargin(OfficialYoga.EDGE_ALL, 10);
+        root.setOverflow(OfficialYoga.OVERFLOW_SCROLL);
+
+        const containers: any[] = [];
+
+        // Create 4 main containers with different layout patterns
+        for (let i = 0; i < 4; i++) {
+          const container = OfficialYoga.Node.create();
+          container.setFlexGrow(1);
+          container.setFlexShrink(0);
+          container.setFlexBasisPercent(25);
+          container.setMargin(OfficialYoga.EDGE_ALL, 5);
+          container.setPadding(OfficialYoga.EDGE_ALL, 10);
+
+          // Vary container properties
+          if (i === 0) {
+            // Horizontal scrolling container
+            container.setFlexDirection(OfficialYoga.FLEX_DIRECTION_ROW);
+            container.setFlexWrap(OfficialYoga.WRAP_NO_WRAP);
+            container.setOverflow(OfficialYoga.OVERFLOW_SCROLL);
+            container.setJustifyContent(OfficialYoga.JUSTIFY_FLEX_START);
+          } else if (i === 1) {
+            // Grid-like wrapping container
+            container.setFlexDirection(OfficialYoga.FLEX_DIRECTION_ROW);
+            container.setFlexWrap(OfficialYoga.WRAP_WRAP);
+            container.setAlignContent(OfficialYoga.ALIGN_SPACE_BETWEEN);
+            container.setJustifyContent(OfficialYoga.JUSTIFY_SPACE_AROUND);
+          } else if (i === 2) {
+            // Absolute positioned container
+            container.setFlexDirection(OfficialYoga.FLEX_DIRECTION_COLUMN);
+            container.setPositionType(OfficialYoga.POSITION_TYPE_RELATIVE);
+            container.setAlignItems(OfficialYoga.ALIGN_CENTER);
+          } else {
+            // Complex nested container
+            container.setFlexDirection(OfficialYoga.FLEX_DIRECTION_COLUMN);
+            container.setJustifyContent(OfficialYoga.JUSTIFY_SPACE_EVENLY);
+            container.setAlignItems(OfficialYoga.ALIGN_STRETCH);
+          }
+
+          root.insertChild(container, i);
+          containers.push(container);
+        }
+
+        // Populate each container with complex children
+        containers.forEach((container, containerIndex) => {
+          const childCount = 8 + containerIndex * 3; // Varying child counts
+
+          for (let j = 0; j < childCount; j++) {
+            const child = OfficialYoga.Node.create();
+
+            // Base properties for all children
+            child.setPadding(OfficialYoga.EDGE_ALL, 3);
+            child.setMargin(OfficialYoga.EDGE_ALL, 2);
+            child.setBorder(OfficialYoga.EDGE_ALL, 1);
+
+            // Complex property variations based on position
+            const variation = (containerIndex * childCount + j) % 12;
+
+            switch (variation) {
+              case 0: // Fixed size with aspect ratio
+                child.setWidth(80);
+                child.setAspectRatio(1.5);
+                child.setFlexShrink(0);
+                break;
+              case 1: // Percentage width with min/max constraints
+                child.setWidthPercent(40);
+                child.setMinWidth(60);
+                child.setMaxWidth(120);
+                child.setHeight(50);
+                break;
+              case 2: // Flex grow with percentage height
+                child.setFlexGrow(2);
+                child.setHeightPercent(15);
+                child.setMinHeight(30);
+                child.setAlignSelf(OfficialYoga.ALIGN_FLEX_START);
+                break;
+              case 3: // Absolute positioned
+                child.setPositionType(OfficialYoga.POSITION_TYPE_ABSOLUTE);
+                child.setPosition(OfficialYoga.EDGE_LEFT, 10 + j * 5);
+                child.setPosition(OfficialYoga.EDGE_TOP, 10 + j * 3);
+                child.setWidth(40);
+                child.setHeight(40);
+                break;
+              case 4: // Complex margin/padding variations
+                child.setFlexGrow(1);
+                child.setMargin(OfficialYoga.EDGE_LEFT, 5);
+                child.setMargin(OfficialYoga.EDGE_RIGHT, 15);
+                child.setPadding(OfficialYoga.EDGE_TOP, 8);
+                child.setPadding(OfficialYoga.EDGE_BOTTOM, 12);
+                child.setMinHeight(40);
+                break;
+              case 5: // Percentage-based with aspect ratio
+                child.setWidthPercent(30);
+                child.setAspectRatio(0.75);
+                child.setFlexShrink(1);
+                child.setAlignSelf(OfficialYoga.ALIGN_CENTER);
+                break;
+              case 6: // Max constraints with flex
+                child.setFlexGrow(1);
+                child.setMaxWidth(100);
+                child.setMaxHeight(80);
+                child.setAlignSelf(OfficialYoga.ALIGN_FLEX_END);
+                break;
+              case 7: // Hidden/Display variations
+                if (j % 3 === 0) {
+                  child.setDisplay(OfficialYoga.DISPLAY_NONE);
+                } else {
+                  child.setDisplay(OfficialYoga.DISPLAY_FLEX);
+                  child.setFlexGrow(1);
+                  child.setHeight(35);
+                }
+                break;
+              case 8: // Complex border/padding combinations
+                child.setBorder(OfficialYoga.EDGE_LEFT, 3);
+                child.setBorder(OfficialYoga.EDGE_RIGHT, 1);
+                child.setPadding(OfficialYoga.EDGE_LEFT, 10);
+                child.setPadding(OfficialYoga.EDGE_RIGHT, 5);
+                child.setWidth(70);
+                child.setHeight(45);
+                break;
+              case 9: // Nested flex container
+                child.setFlexDirection(OfficialYoga.FLEX_DIRECTION_ROW);
+                child.setFlexGrow(1);
+                child.setMinHeight(60);
+                child.setJustifyContent(OfficialYoga.JUSTIFY_SPACE_BETWEEN);
+
+                // Add nested children
+                for (let k = 0; k < 3; k++) {
+                  const nested = OfficialYoga.Node.create();
+                  nested.setFlexGrow(1);
+                  nested.setHeight(20);
+                  nested.setMargin(OfficialYoga.EDGE_ALL, 1);
+                  nested.setAspectRatio(1.0);
+                  child.insertChild(nested, k);
+                }
+                break;
+              case 10: // Overflow and scrolling
+                child.setOverflow(OfficialYoga.OVERFLOW_SCROLL);
+                child.setWidth(90);
+                child.setHeight(70);
+                child.setFlexShrink(0);
+                break;
+              case 11: // Complex positioning
+                child.setPositionType(OfficialYoga.POSITION_TYPE_RELATIVE);
+                child.setPosition(OfficialYoga.EDGE_LEFT, j * 2);
+                child.setFlexGrow(1);
+                child.setMinWidth(50);
+                child.setMaxWidth(150);
+                child.setHeight(55);
+                break;
+            }
+
+            container.insertChild(child, j);
+          }
+        });
+
+        // Multiple layout calculations with property changes
+        root.calculateLayout(undefined, undefined);
+
+        // Dynamic property changes during benchmark
+        containers[0]?.setFlexDirection(OfficialYoga.FLEX_DIRECTION_COLUMN);
+        containers[1]?.setJustifyContent(OfficialYoga.JUSTIFY_CENTER);
+        root.calculateLayout(undefined, undefined);
+
+        containers[2]?.setAlignItems(OfficialYoga.ALIGN_FLEX_END);
+        containers[3]?.setFlexWrap(OfficialYoga.WRAP_WRAP_REVERSE);
+        root.calculateLayout(undefined, undefined);
+
+        // Final calculation
+        root.calculateLayout(undefined, undefined);
+
+        // Get layout to ensure calculations happened
+        const layout = root.getComputedLayout();
+
+        root.freeRecursive();
+      }
+    );
+
+    this.runner.printResults("Advanced Features Stress Test", results);
+    return results;
+  }
 }
 
 // Main execution
 async function main() {
   const args = process.argv.slice(2);
-  const iterations = args.length > 0 ? parseInt(args[0], 10) : 10000;
+  const iterations = args.length > 0 ? parseInt(args[0] ?? "10000", 10) : 10000;
 
   if (isNaN(iterations) || iterations <= 0) {
     console.error(

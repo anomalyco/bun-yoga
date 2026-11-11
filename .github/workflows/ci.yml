@@ -27,7 +27,7 @@ jobs:
         package_name: [windows-x86_64, many-linux-x86_64, macos-aarch64, macos-x86_64, linux-x86_64]
         build_type: [Release]
         include:
-          - os: macos-latest
+          - os: blacksmith-6vcpu-macos-latest
             package_name: macos-aarch64
             target: aarch64-macos
             lib_name: libwebgpu_wrapper.dylib
@@ -106,7 +106,7 @@ jobs:
         bun run build:windows -BuildType ${{ matrix.build_type }}
 
     - name: Build Binaries (macOS)
-      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
+      if: matrix.os == 'blacksmith-6vcpu-macos-latest' || matrix.os == 'macos-13'
       run: |
         bun run build:prod -Dtarget=${{ matrix.target }}
 
